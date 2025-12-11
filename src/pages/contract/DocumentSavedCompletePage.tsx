@@ -1,45 +1,77 @@
 import React from "react";
+import { useNavigate } from 'react-router-dom';
+import '../../App.css'
+import CheckboxIcon from '../../assets/icons/checkbox.png'
 
-interface Props {
-  onBackHome: () => void;
+const styles ={
+    container: {
+    backgroundColor: '#F1F2F6',
+    minHeight: '100vh',
+    padding: '40px 24px',
+    margin: '0',
+    display: 'flex',
+    flexDirection: 'column',
+  } as const,
+  title: {
+    fontSize: '34px',
+    fontWeight: '530',
+    width:'100%',
+    textAlign: 'left',
+    marginBottom: '20px',
+    lineHeight: '1.3',
+    color: '#1a1a1aff',
+  } as const,
 }
 
-export default function DocumentSavedCompletePage({ onBackHome }: Props) {
+const DocumentSavedCompletePage= () => {
+    const navigate = useNavigate();
   return (
     <div
-      style={{
-        height: "100%",
-        width: "100%",
-        background: "linear-gradient(to bottom, #ffffff 60%, #f3f4f7)",
-        padding: "40px 24px",
-        textAlign: "center",
-      }}
+      style={styles.container}
     >
-      <h2 style={{ fontSize: "24px", fontWeight: 700, marginTop: "80px" }}>
+      <h1 style={styles.title}>
         저장 완료!
-      </h2>
+      </h1>
 
-      <p style={{ fontSize: "15px", color: "#666", marginTop: "12px" }}>
-        문서가 성공적으로 저장되었습니다.
-      </p>
+      <div style={{ 
+              flexGrow: 1, 
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '100%',
+              textAlign:'center',
+          }}>
+        <img src={CheckboxIcon} style={{width:'30px', height:'30px', marginBottom:'10px'}}/>
+        저장한 계약서는 언제든<br/>홈 화면 &gt; 마이 메뉴 &gt; 내 계약서에서<br/>확인할 수 있어요.
+        </div>
 
       <button
         className="button-press"
         style={{
-          width: "100%",
-          padding: "14px 0",
-          borderRadius: "12px",
-          marginTop: "50px",
-          border: "none",
-          background: "linear-gradient(to right, #6bc7ff, #5b6bff)",
-          color: "white",
-          fontSize: "15px",
-          fontWeight: 600,
+        width:"200px",
+        display:"block",
+        justifyContent: "center",
+        alignItems:"center",
+        
+        margin:"0 auto",
+
+        padding: "10px 0",
+        borderRadius: "50px",
+        marginBottom: "70px",
+        border: "none",
+        background: "white",
+        color: "black",
+        fontSize: "15px",
+        fontWeight: 600,
+        boxShadow:'0px 1px 3px rgba(0, 0, 0, 0.2)',
         }}
-        onClick={onBackHome}
+        onClick={() => navigate('/')}
       >
-        홈으로 돌아가기
+        홈 화면으로
       </button>
     </div>
   );
 }
+
+export default DocumentSavedCompletePage;

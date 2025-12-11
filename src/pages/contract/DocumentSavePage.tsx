@@ -1,54 +1,76 @@
-import React, { useState } from "react";
+import React, { use, useState } from "react";
+import { useNavigate } from 'react-router-dom';
+import './contractCarousel.css'
+import '../../App.css'
 
 interface Props {
   onBack: () => void;
   onSave: () => void;  
 }
 
-function DocumentSavePage({ onBack, onSave }: Props) {
+const styles={
+    container: {
+    backgroundColor: '#F1F2F6',
+    minHeight: '100vh',
+    padding: '40px 24px',
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+  } as const,
+  title: {
+    fontSize: '34px',
+    fontWeight: '530',
+    width:'100%',
+    textAlign: 'left',
+    marginBottom: '100px',
+    lineHeight: '1.3',
+    color: '#1a1a1aff',
+  } as const,
+
+  buttonBase: {
+    width: "100%",
+    padding: "11px 20px",
+    borderRadius: "10px",
+    border: "none",
+    background: "linear-gradient(to right, #21D8FC, #5865B9)",
+    boxShadow: '0 2px 5px rgba(143, 143, 143, 0.8)',
+    color: "#fff",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+    marginBottom: "12px",
+  },
+}
+
+function DocumentSavePage({onBack, onSave}: Props) {
   const [title, setTitle] = useState("2024-11-표준계약서_임대");
 
+  const navigate = useNavigate();
+
   return (
-    <div
-      style={{
-        height: "100%",
-        width: "100%",
-        background: "linear-gradient(to bottom, #ffffff 55%, #f4f6f9 100%)",
-        padding: "38px 24px",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column"
-      }}
+    <div style={styles.container}
     >
-      <h2
-        style={{
-          fontSize: "24px",
-          fontWeight: 700,
-          lineHeight: "1.45",
-          margin: 0,
-        }}
-      >
+      <h1 style={styles.title}>
         이 계약서를<br />나의 문서로 저장할까요?
-      </h2>
+      </h1>
 
       <div
         style={{
-          flexGrow: 1,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: "28px",
-          marginTop: "10px",
+          gap: "20px",
+          marginBottom:'80px',
         }}
       >
         <div>
           <label
             style={{
-              fontSize: "14px",
-              fontWeight: 600,
-              color: "#444",
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "#000000ff",
               marginBottom: "10px",
-              display: "block"
+              display: "block",
             }}
           >
             문서 이름
@@ -82,37 +104,24 @@ function DocumentSavePage({ onBack, onSave }: Props) {
           중요 문서함에 추가하기
         </label>
       </div>
-
+          
       {/* 저장 버튼 */}
       <button
-        style={{
-          width: "100%",
-          padding: "11px 0",
-          borderRadius: "10px",
-          border: "none",
-          background: "linear-gradient(90deg, #6bc7ff, #5b6bff)",
-          color: "#fff",
-          fontSize: "14px",
-          fontWeight: 600,
-          cursor: "pointer"
-        }}
-        onClick={onSave} 
+        style={{...styles.buttonBase}}
+        onClick={()=>{
+            // 저장 API 넣는 곳 입니다 
+            navigate('/contract/saved');
+        }} 
       >
         내 문서에 저장하기
       </button>
 
       {/* 저장하지 않기 버튼 */}
       <button
-        style={{
-          width: "100%",
-          padding: "10px 0",
-          borderRadius: "10px",
-          border: "1px solid #ddd",
-          background: "#ffffff",
-          color: "#444",
-          fontSize: "13.5px",
-          cursor: "pointer"
-        }}
+        style={{...styles.buttonBase, background:'white', color:'black'}}
+        onClick={()=>{
+            navigate('/'); // 저장하지 않고 홈으로 돌아감
+        }} 
       >
         저장하지 않고 나가기
       </button>

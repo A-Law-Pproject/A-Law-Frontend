@@ -1,11 +1,13 @@
 import React, { useRef, useState } from "react";
+import { useNavigate } from 'react-router-dom';
+
+
 import "./contractCarousel.css";
 import ContractOriginalPage from "./ContractOriginalPage.js";
 import ClauseSummaryPage from "./ClauseSummaryPage.js";
 import RiskAnalysisPage from "./RiskAnalysisPage.js";
 import ContractOverlay from "../../components/ContractOverlay.js";
 import DocumentSavePage from "./DocumentSavePage.js";
-import DocumentSavedCompletePage from "./DocumentSavedCompletePage.js";
 
 const pages = [
   { id: 0, label: "원문 보기" },
@@ -14,12 +16,12 @@ const pages = [
 ];
 
 function ContractCarousel() {
+const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedText, setSelectedText] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const [showSavePage, setShowSavePage] = useState(false);
-  const [showCompletePage, setShowCompletePage] = useState(false);
   const [animOut, setAnimOut] = useState(false);
 
   const touchStartX = useRef<number | null>(null);
@@ -34,24 +36,10 @@ function ContractCarousel() {
   };
 
   /* PAGE5: 저장 완료 화면 */
-  if (showCompletePage) {
-    return (
-      <div className="phone-frame">
-        <div className="page-transition-scale-fade">
-          <DocumentSavedCompletePage
-            onBackHome={() => {
-              setShowCompletePage(false);
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
   /* PAGE4: 문서 저장 화면 */
   if (showSavePage) {
     return (
-      <div className="phone-frame">
+      <div>
         <div className={animOut ? "page-transition-out" : "page-transition-scale-fade"}>
           <DocumentSavePage
             onBack={() => {
@@ -62,8 +50,12 @@ function ContractCarousel() {
               }, 300);
             }}
             onSave={() => {
-              setShowSavePage(false);
-              setShowCompletePage(true); 
+              setAnimOut(true);
+              setTimeout(()=>{
+                setShowSavePage(false);
+                setAnimOut(false);
+                navigate('/contract/saved');
+              }, 300);
             }}
           />
         </div>
@@ -148,17 +140,17 @@ function ContractCarousel() {
   };
 
   return (
-    <div className="phone-frame">
-      <div className="phone-notch" />
+    <div className="container">
+      <div className="" />
 
-      <div className="phone-header">
-        <span className="back-btn" onClick={() => window.history.back()}>
+      <div className="header">
+        <span className="back-btn" onClick={()=>navigate('/')}>
           ← 이전으로 돌아가기
         </span>
 
         <span
           className="button-press"
-          style={{ marginLeft: "auto", fontSize: 15, color: "#111", cursor: "pointer" }}
+          style={{fontSize: 15, color: "#111", cursor: "pointer" }}
           onClick={() => {
             haptic();
             setShowSavePage(true);

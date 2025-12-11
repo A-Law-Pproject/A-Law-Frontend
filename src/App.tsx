@@ -9,6 +9,7 @@ import SaveComplete from './pages/SaveComplete.js';
 import CameraPage from './pages/scan/CameraPage.js';
 import CapturedResult from './pages/scan/CapturedResult.js';
 import ContractCarousel from './pages/contract/ContractCarousel.js';
+import DocumentSavedCompletePage from './pages/contract/DocumentSavedCompletePage.js';
 
 function App(){
   const navigate = useNavigate();
@@ -43,8 +44,11 @@ function App(){
       {/* Scan Saved Page */}
       <Route path="/saved" element={<SaveComplete />} />
 
-      {/* Contract carousel page */}
-      <Route path="/contract" element={<ContractCarousel />} />
+      {/* Contract carousel view page */}
+      <Route path="/contract/view" element={<ContractCarousel />} />
+
+      {/* Contract carousel saved page */}
+      <Route path="/contract/saved" element={<DocumentSavedCompletePage />} />
     </Routes>
   );
 }
