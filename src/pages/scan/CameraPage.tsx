@@ -1,4 +1,4 @@
-import '../App.css'
+import '../../App.css'
 import { useNavigate } from 'react-router-dom';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
@@ -136,7 +136,7 @@ const CameraPage: React.FC = () => {
                     stream.getTracks().forEach(track => track.stop());
                 }
 
-                navigate('/capturedResult', {state:{capturedImageData: dataUrl}});
+                navigate('/contract/view', {state:{capturedImageData: dataUrl}});
             }
         }
     }, [isCameraActive, capturedImage, navigate]);
