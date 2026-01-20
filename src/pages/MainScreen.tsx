@@ -246,7 +246,7 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <img src={MenuIcon} style={{width:'28px', height:'28px', cursor: 'pointer' }} />
+        <img src={MenuIcon} style={{width:'28px', height:'28px', cursor: 'pointer' }} onClick={()=> navigate('/mycontracts')} />
         <img
           src={UserIcon}
           style={{ width: '36px', height: '36px', cursor: 'pointer' }}
