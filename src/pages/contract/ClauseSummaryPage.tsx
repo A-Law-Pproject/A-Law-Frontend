@@ -1,68 +1,60 @@
-import React from "react";
-// import { generateSummary } from "../../services/contractService.js";  // 서비스 사용 시
+import React, { useState, useEffect } from "react";
+import { generateSummary } from "../../services/contractApi.js";
 
 interface Props {
   onSelect: (text: string) => void;
+  contractId?: string; // 계약서 ID
 }
 
-function ClauseSummaryPage({ onSelect }: Props) {
-  // ============================================
-  // 여기에 API 호출 코드 삽입
-  // ============================================
-  // API: POST /api/v1/contracts/{id}/summaries
-  // 설명: 계약서 간단 요약 생성
-  //
-  // 필요한 데이터:
-  // - contractId: string (계약서 ID)
-  //
-  // 예시 코드:
-  // const [summary, setSummary] = useState("");
-  // const [isLoading, setIsLoading] = useState(false);
-  // const [error, setError] = useState("");
-  //
-  // useEffect(() => {
-  //   const fetchSummary = async () => {
-  //     const API_KEY = "여기에 API 키 입력";
-  //     const BASE_URL = "http://localhost:3000/api/v1";
-  //     const CONTRACT_ID = "contract_123";  // 실제 계약서 ID로 교체 필요
-  //
-  //     setIsLoading(true);
-  //     setError("");
-  //
-  //     try {
-  //       const response = await fetch(
-  //         `${BASE_URL}/contracts/${CONTRACT_ID}/summaries`,
-  //         {
-  //           method: 'POST',
-  //           headers: {
-  //             'Authorization': `Bearer ${API_KEY}`,
-  //             'Content-Type': 'application/json',
-  //           },
-  //         }
-  //       );
-  //
-  //       if (!response.ok) throw new Error('요약 생성 실패');
-  //       const data = await response.json();
-  //
-  //       setIsLoading(false);
-  //       setSummary(data.summary);
-  //     } catch (error) {
-  //       setIsLoading(false);
-  //       setError('요약을 불러오는데 실패했습니다.');
-  //     }
-  //   };
-  //
-  //   fetchSummary();
-  // }, []);
-  // ============================================
+function ClauseSummaryPage({ onSelect, contractId }: Props) {
+  const [summary, setSummary] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      if (!contractId) return;
+
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const result = await generateSummary(contractId);
+        setSummary(result.contextSummary);
+      } catch (err) {
+        console.error("요약 생성 실패:", err);
+        setError("요약을 불러오는데 실패했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSummary();
+  }, [contractId]);
 
   return (
     <div className="page-container">
       <h2 className="page-title">임대차 계약 요약</h2>
       <p className="page-caption">AI가 임대차 계약 내용을 이해하기 쉽게 요약했습니다.</p>
-      {/* TODO: API 연동 후 동적 데이터로 교체 필요 */}
 
-      <div className="doc-box">
+      {!contractId ? (
+        <div className="doc-box">
+          <p style={{ color: "#999", fontStyle: "italic" }}>계약서 ID가 필요합니다.</p>
+        </div>
+      ) : isLoading ? (
+        <div className="doc-box">
+          <p>요약을 불러오는 중...</p>
+        </div>
+      ) : error ? (
+        <div className="doc-box">
+          <p style={{ color: "#e74c3c" }}>{error}</p>
+        </div>
+      ) : summary ? (
+        <div className="doc-box">
+          <p>{summary}</p>
+        </div>
+      ) : (
+        <div className="doc-box">
 
         <p>
           임차인은 보증금{" "}
@@ -110,7 +102,8 @@ function ClauseSummaryPage({ onSelect }: Props) {
 
         <p>분쟁은 협의 후 관할 법원에서 해결한다.</p>
 
-      </div>
+        </div>
+      )}
     </div>
   );
 }

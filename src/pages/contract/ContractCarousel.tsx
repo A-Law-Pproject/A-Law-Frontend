@@ -24,6 +24,10 @@ function ContractCarousel() {
 
   const [chatbotOpen, setChatbotOpen] = useState(false);
 
+  // TODO: 실제 계약서 ID를 URL 파라미터나 상태로부터 가져오기
+  // 예: const { contractId } = useParams();
+  const contractId = "contract_123"; // 임시 하드코딩
+
   const touchStartX = useRef<number | null>(null);
   const touchStartTime = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -443,13 +447,13 @@ function ContractCarousel() {
 
           <div className="carousel-page">
             <div style={pageStyle(1)}>
-              <ClauseSummaryPage onSelect={handleHighlightClick} />
+              <ClauseSummaryPage onSelect={handleHighlightClick} contractId={contractId} />
             </div>
           </div>
 
           <div className="carousel-page">
             <div style={pageStyle(2)}>
-              <RiskAnalysisPage onSelect={handleHighlightClick} />
+              <RiskAnalysisPage onSelect={handleHighlightClick} contractId={contractId} />
             </div>
           </div>
         </div>
@@ -461,6 +465,7 @@ function ContractCarousel() {
         <ContractOverlay
           selectedText={selectedText}
           onClose={handleOverlayClose}
+          contractId={contractId}
         />
       )}
 
@@ -469,7 +474,7 @@ function ContractCarousel() {
       )}
 
       {chatbotOpen && (
-        <ChatbotPanel onClose={() => setChatbotOpen(false)} />
+        <ChatbotPanel onClose={() => setChatbotOpen(false)} contractId={contractId} />
       )}
     </div>
   );

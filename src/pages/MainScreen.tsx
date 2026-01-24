@@ -14,6 +14,9 @@ import UserIcon from '../assets/icons/user.png';
 // Icon (react icon)
 import { FaChevronRight } from 'react-icons/fa';
 
+// Chatbot
+import ChatbotPanel from './contract/ChatbotPanel.js';
+
 interface Contract {
     id: number;
     title: string;
@@ -200,6 +203,9 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // 챗봇 패널 표시 상태
+  const [showChatbot, setShowChatbot] = useState(false);
+
   // 2. 녹음 시작 함수
   const startRecording = async () => {
     try {
@@ -291,7 +297,7 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
       </div>
 
       {/*챗봇과 대화하기 버튼*/}
-      <div style={styles.chatbotButton} onClick={() => navigate('/chatbot')}>
+      <div style={styles.chatbotButton} onClick={() => setShowChatbot(true)}>
           <img src={ChatbotIcon} style={{width:'60px', height: '60px', filter: 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.4))'}}/>
         챗봇과 대화하기
       </div>
@@ -308,6 +314,9 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
           />
         ))}
       </div>
+
+      {/* Chatbot Panel */}
+      {showChatbot && <ChatbotPanel onClose={() => setShowChatbot(false)} />}
     </div>
   )
 }

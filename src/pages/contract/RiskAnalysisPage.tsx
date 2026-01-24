@@ -1,68 +1,70 @@
-import React from "react";
-// import { generateRiskAnalysis } from "../../services/contractService.js";  // 서비스 사용 시
+import React, { useState, useEffect } from "react";
+import { generateRiskAnalysis } from "../../services/contractApi.js";
 
 interface Props {
   onSelect: (text: string) => void;
+  contractId?: string; // 계약서 ID
 }
 
-function RiskAnalysisPage({ onSelect }: Props) {
-  // ============================================
-  // 여기에 API 호출 코드 삽입
-  // ============================================
-  // API: POST /api/v1/contracts/{id}/risks
-  // 설명: Risk 분석 생성
-  //
-  // 필요한 데이터:
-  // - contractId: string (계약서 ID)
-  //
-  // 예시 코드:
-  // const [riskAnalysis, setRiskAnalysis] = useState("");
-  // const [isLoading, setIsLoading] = useState(false);
-  // const [error, setError] = useState("");
-  //
-  // useEffect(() => {
-  //   const fetchRiskAnalysis = async () => {
-  //     const API_KEY = "여기에 API 키 입력";
-  //     const BASE_URL = "http://localhost:3000/api/v1";
-  //     const CONTRACT_ID = "contract_123";  // 실제 계약서 ID로 교체 필요
-  //
-  //     setIsLoading(true);
-  //     setError("");
-  //
-  //     try {
-  //       const response = await fetch(
-  //         `${BASE_URL}/contracts/${CONTRACT_ID}/risks`,
-  //         {
-  //           method: 'POST',
-  //           headers: {
-  //             'Authorization': `Bearer ${API_KEY}`,
-  //             'Content-Type': 'application/json',
-  //           },
-  //         }
-  //       );
-  //
-  //       if (!response.ok) throw new Error('위험 분석 생성 실패');
-  //       const data = await response.json();
-  //
-  //       setIsLoading(false);
-  //       setRiskAnalysis(data.riskAnalysis);
-  //     } catch (error) {
-  //       setIsLoading(false);
-  //       setError('위험 분석을 불러오는데 실패했습니다.');
-  //     }
-  //   };
-  //
-  //   fetchRiskAnalysis();
-  // }, []);
-  // ============================================
+function RiskAnalysisPage({ onSelect, contractId }: Props) {
+  const [risks, setRisks] = useState<Array<{ level: string; items: string[] }>>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchRiskAnalysis = async () => {
+      if (!contractId) return;
+
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const result = await generateRiskAnalysis(contractId);
+        setRisks(result.risks);
+      } catch (err) {
+        console.error("위험 분석 실패:", err);
+        setError("위험 분석을 불러오는데 실패했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRiskAnalysis();
+  }, [contractId]);
 
   return (
     <div className="page-container">
       <h2 className="page-title">위험 요소 분석</h2>
       <p className="page-caption">임대차 계약에서 분쟁 가능성이 있는 부분을 분석했습니다.</p>
-      {/* TODO: API 연동 후 동적 데이터로 교체 필요 */}
 
-      <div className="doc-box">
+      {!contractId ? (
+        <div className="doc-box">
+          <p style={{ color: "#999", fontStyle: "italic" }}>계약서 ID가 필요합니다.</p>
+        </div>
+      ) : isLoading ? (
+        <div className="doc-box">
+          <p>위험 분석을 불러오는 중...</p>
+        </div>
+      ) : error ? (
+        <div className="doc-box">
+          <p style={{ color: "#e74c3c" }}>{error}</p>
+        </div>
+      ) : risks.length > 0 ? (
+        <div className="doc-box">
+          {risks.map((risk, idx) => (
+            <div key={idx}>
+              {risk.items.map((item, itemIdx) => (
+                <p key={itemIdx}>
+                  <span className="highlight" onClick={() => onSelect(item)}>
+                    {item}
+                  </span>
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="doc-box">
 
         <p>
           월 차임 <strong>2회 연속 연체 시 즉시 해지</strong>는 
@@ -121,14 +123,15 @@ function RiskAnalysisPage({ onSelect }: Props) {
         </p>
 
         <p>
-          안전사고 시 과실 여부 해석이 일치하지 않아 
+          안전사고 시 과실 여부 해석이 일치하지 않아
           <span className="highlight" onClick={() => onSelect("책임 소재 분쟁")}>
             임대인·임차인 간 분쟁
           </span>
           이 발생할 가능성이 크다.
         </p>
 
-      </div>
+        </div>
+      )}
     </div>
   );
 }
