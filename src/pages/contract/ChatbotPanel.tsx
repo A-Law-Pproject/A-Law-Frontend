@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-// import { generateChatResponse } from "../../services/llmService.js";  // 서비스 사용 시
+import { sendChatMessage, type ChatMessage } from "../../services/contractApi.js";
 
 interface Props {
   onClose: () => void;
   initialQuestion?: string;
+  contractId?: string; // 계약서 ID
 }
 
 interface Message {
@@ -14,7 +15,7 @@ interface Message {
 
 const STORAGE_KEY = "contract_chat_history_v2";
 
-function ChatbotPanel({ onClose, initialQuestion }: Props) {
+function ChatbotPanel({ onClose, initialQuestion, contractId }: Props) {
   const [messages, setMessages] = useState<Message[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved
@@ -61,65 +62,52 @@ function ChatbotPanel({ onClose, initialQuestion }: Props) {
 
     setInput("");
 
-    // ============================================
-    // 여기에 API 호출 코드 삽입
-    // ============================================
-    // 참고: 챗봇은 백엔드 API 명세서에 별도 엔드포인트가 없으므로
-    //       LLM API를 직접 호출하거나, 백엔드에 챗봇 API 추가 필요
-    //
-    // 예시 코드 (LLM 직접 호출):
-    // const API_KEY = "여기에 LLM API 키 입력";
-    // const history = messages
-    //   .filter(m => !m.typing)
-    //   .map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.text }));
-    //
-    // try {
-    //   const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    //     method: 'POST',
-    //     headers: {
-    //       'Authorization': `Bearer ${API_KEY}`,
-    //       'Content-Type': 'application/json',
-    //     },
-    //     body: JSON.stringify({
-    //       model: 'gpt-4',
-    //       messages: [
-    //         { role: 'system', content: '당신은 계약서 전문가입니다.' },
-    //         ...history,
-    //         { role: 'user', content: text }
-    //       ],
-    //     }),
-    //   });
-    //   const data = await response.json();
-    //   const botResponse = data.choices[0].message.content;
-    //
-    //   setMessages(prev => {
-    //     const filtered = prev.filter(m => !m.typing);
-    //     return [...filtered, { role: "bot", text: botResponse, typing: undefined }];
-    //   });
-    // } catch (error) {
-    //   setMessages(prev => {
-    //     const filtered = prev.filter(m => !m.typing);
-    //     return [...filtered, { role: "bot", text: "응답 생성 실패", typing: undefined }];
-    //   });
-    // }
-    // ============================================
+    // contractId가 없으면 더미 응답 사용
+    if (!contractId) {
+      setTimeout(() => {
+        setMessages(prev => {
+          const filtered = prev.filter(m => !m.typing);
+          return [...filtered, {
+            role: "bot",
+            text: "계약서 ID가 필요합니다. 계약서를 먼저 업로드해주세요.",
+            typing: undefined
+          }];
+        });
+      }, 500);
+      return;
+    }
 
-    // 임시: 더미 동작 (위 코드로 교체하세요)
-    setTimeout(() => {
-      let response = "";
-      if (text.includes("보증금")) {
-        response = "보증금 조항은 반환 시점과 조건이 핵심이에요.";
-      } else if (text.includes("위험")) {
-        response = "이 조항은 임차인에게 불리할 가능성이 있습니다.";
-      } else {
-        response = "해당 조항은 계약 조건에 따라 해석이 달라질 수 있어 주의가 필요합니다.";
-      }
+    try {
+      // 대화 히스토리를 ChatMessage 형식으로 변환
+      const history: ChatMessage[] = messages
+        .filter(m => !m.typing)
+        .map(m => ({
+          role: m.role === "user" ? "user" : "assistant",
+          content: m.text
+        }));
+
+      // API 호출
+      const result = await sendChatMessage(contractId, text, history);
 
       setMessages(prev => {
         const filtered = prev.filter(m => !m.typing);
-        return [...filtered, { role: "bot", text: response, typing: undefined }];
+        return [...filtered, {
+          role: "bot",
+          text: result.response,
+          typing: undefined
+        }];
       });
-    }, 700);
+    } catch (error) {
+      console.error("챗봇 응답 실패:", error);
+      setMessages(prev => {
+        const filtered = prev.filter(m => !m.typing);
+        return [...filtered, {
+          role: "bot",
+          text: "죄송합니다. 응답을 생성하는데 실패했습니다. 다시 시도해주세요.",
+          typing: undefined
+        }];
+      });
+    }
   };
 
   return (

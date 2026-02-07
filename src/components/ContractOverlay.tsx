@@ -1,13 +1,15 @@
 import { useRef, useState, useEffect } from "react";
 import "../pages/contract/contractCarousel.css";
-// import { explainSelectedText } from "../services/llmService.js";  // 서비스 사용 시
+import { generateEasyExplanation } from "../services/contractApi.js";
+import type { EasyExplanationResponse } from "../types/contract.js";
 
 type Props = {
   selectedText: string | null;
   onClose: () => void;
+  contractId?: string; // 계약서 ID (선택적)
 };
 
-function ContractOverlay({ selectedText, onClose }: Props) {
+function ContractOverlay({ selectedText, onClose, contractId }: Props) {
   const minHeight = 180;
   const midHeight = 360;
   const maxHeight = 600;
@@ -19,6 +21,9 @@ function ContractOverlay({ selectedText, onClose }: Props) {
   const startHeight = useRef(minHeight);
 
   const [isDragging, setIsDragging] = useState(false);
+  const [explanationData, setExplanationData] = useState<EasyExplanationResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>("");
 
   const backdropClose = () => {
     setOpenAnim(false);
@@ -81,44 +86,28 @@ function ContractOverlay({ selectedText, onClose }: Props) {
     setHeight(target);
   };
 
-  // ============================================
-  // 여기에 API 호출 코드 삽입
-  // ============================================
-  // API: POST /api/v1/contracts/{id}/easy-explanation
-  // 설명: 특정 문장에 대한 쉬운 말 요약 생성
-  //
-  // 필요한 데이터:
-  // - contractId: string (계약서 ID)
-  // - selectedText: string (선택된 문구)
-  //
-  // 예시 코드:
-  // const handleExplain = async () => {
-  //   const API_KEY = "여기에 API 키 입력";
-  //   const BASE_URL = "http://localhost:3000/api/v1";
-  //   const CONTRACT_ID = "contract_123";  // 실제 계약서 ID로 교체 필요
-  //
-  //   try {
-  //     const response = await fetch(
-  //       `${BASE_URL}/contracts/${CONTRACT_ID}/easy-explanation`,
-  //       {
-  //         method: 'POST',
-  //         headers: {
-  //           'Authorization': `Bearer ${API_KEY}`,
-  //           'Content-Type': 'application/json',
-  //         },
-  //         body: JSON.stringify({ selectedText }),
-  //       }
-  //     );
-  //
-  //     if (!response.ok) throw new Error('설명 생성 실패');
-  //     const data = await response.json();
-  //
-  //     // 설명 결과를 상태에 저장하거나 UI에 표시
-  //   } catch (error) {
-  //     // 에러 처리
-  //   }
-  // };
-  // ============================================
+  // API 호출: 선택된 문구 쉬운 말로 설명
+  useEffect(() => {
+    const fetchExplanation = async () => {
+      if (!selectedText || !contractId) return;
+
+      setIsLoading(true);
+      setError("");
+      setExplanationData(null);
+
+      try {
+        const result = await generateEasyExplanation(contractId, selectedText);
+        setExplanationData(result);
+      } catch (err) {
+        console.error("설명 생성 실패:", err);
+        setError("설명을 불러오는데 실패했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchExplanation();
+  }, [selectedText, contractId]);
 
   return (
     <>
@@ -145,9 +134,32 @@ function ContractOverlay({ selectedText, onClose }: Props) {
 
         <div className="sheet-divider" />
 
-        <p className="sheet-placeholder">
-          선택한 문구에 대한 설명이 여기에 표시됩니다.
-        </p>
+        {!contractId ? (
+          <p className="sheet-placeholder" style={{ color: "#999", fontStyle: "italic" }}>
+            계약서 ID가 필요합니다.
+          </p>
+        ) : isLoading ? (
+          <p className="sheet-placeholder">설명을 불러오는 중...</p>
+        ) : error ? (
+          <p className="sheet-placeholder" style={{ color: "#e74c3c" }}>{error}</p>
+        ) : explanationData ? (
+          <div className="sheet-explanation">
+            <p className="sheet-easy-translation">{explanationData.easy_translation}</p>
+
+            {explanationData.legal_term_guide && explanationData.legal_term_guide.length > 0 && (
+              <div className="sheet-legal-terms" style={{ marginTop: "16px" }}>
+                <h4 style={{ fontSize: "14px", marginBottom: "8px", color: "#666" }}>법률 용어 설명</h4>
+                {explanationData.legal_term_guide.map((term, index) => (
+                  <div key={index} style={{ marginBottom: "8px", paddingLeft: "8px", borderLeft: "2px solid #3498db" }}>
+                    <strong style={{ color: "#2c3e50" }}>{term.term}</strong>: {term.meaning}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="sheet-placeholder">선택한 문구에 대한 설명이 여기에 표시됩니다.</p>
+        )}
       </div>
     </>
   );

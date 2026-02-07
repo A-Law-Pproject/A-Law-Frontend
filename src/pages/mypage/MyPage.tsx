@@ -1,8 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../App.css';
 
 import UserIcon from '../../assets/icons/user.png';
+import {
+  initKakao,
+  loginWithKakao,
+  dummyLogin,
+  logoutKakao,
+  getKakaoUser,
+  isKakaoLoggedIn,
+  type KakaoUserInfo,
+} from '../../services/kakaoAuth.js';
 
 const styles = {
   container: {
@@ -200,29 +209,78 @@ const styles = {
 
 const MyPage = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('isLoggedIn') === 'true';
+  });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [kakaoUser, setKakaoUser] = useState<KakaoUserInfo | null>(null);
+
+  // 카카오 SDK 초기화 및 로그인 상태 확인
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await initKakao();
+        console.log('✅ 카카오 SDK 초기화 성공');
+
+        // 저장된 로그인 정보 확인
+        if (isKakaoLoggedIn()) {
+          const user = getKakaoUser();
+          if (user) {
+            setKakaoUser(user);
+            setIsLoggedIn(true);
+            console.log('✅ 저장된 로그인 정보 복원:', user.nickname);
+          }
+        }
+      } catch (error) {
+        console.error('❌ 카카오 SDK 초기화 실패:', error);
+      }
+    };
+
+    init();
+  }, []);
 
   const user = useMemo(
     () => ({
-      nickname: '사용자',
-      note: '로그인 상태(더미)입니다.',
+      nickname: kakaoUser?.nickname || '사용자',
+      note: kakaoUser ? '카카오톡 계정으로 로그인되었습니다.' : '로그인 상태(더미)입니다.',
+      profileImage: kakaoUser?.profileImage,
     }),
-    []
+    [kakaoUser]
   );
 
-  const handleMockKakaoLogin = () => {
+  const handleKakaoLogin = async () => {
     if (isAuthLoading) return;
     setIsAuthLoading(true);
-    window.setTimeout(() => {
+
+    try {
+      // TODO: 백엔드 구축 후 loginWithKakao()로 변경
+      const userInfo = await dummyLogin();
+      setKakaoUser(userInfo);
       setIsLoggedIn(true);
+      console.log('카카오 로그인 성공:', userInfo);
+    } catch (error) {
+      console.error('카카오 로그인 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      alert(`로그인에 실패했습니다.\n\n오류: ${errorMessage}\n\n다시 시도해주세요.`);
+    } finally {
       setIsAuthLoading(false);
-    }, 800);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (isAuthLoading) return;
-    setIsLoggedIn(false);
+    setIsAuthLoading(true);
+
+    try {
+      await logoutKakao();
+      setKakaoUser(null);
+      setIsLoggedIn(false);
+      console.log('로그아웃 완료');
+    } catch (error) {
+      console.error('로그아웃 실패:', error);
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
 
   const pressStyle = (e: React.MouseEvent<HTMLElement>) => {
@@ -272,7 +330,7 @@ const MyPage = () => {
               opacity: isAuthLoading ? 0.75 : 1,
               cursor: isAuthLoading ? 'default' : 'pointer',
             }}
-            onClick={handleMockKakaoLogin}
+            onClick={handleKakaoLogin}
             onMouseDown={pressStyle}
             onMouseUp={releaseStyle}
             onMouseLeave={releaseStyle}
@@ -296,7 +354,21 @@ const MyPage = () => {
       ) : (
         <div style={styles.card}>
           <div style={styles.userIconWrap}>
-            <img src={UserIcon} style={styles.userIcon} />
+            {user.profileImage ? (
+              <img
+                src={user.profileImage}
+                style={{
+                  ...styles.userIcon,
+                  width: '74px',
+                  height: '74px',
+                  borderRadius: '22px',
+                  opacity: 1,
+                }}
+                alt="프로필"
+              />
+            ) : (
+              <img src={UserIcon} style={styles.userIcon} />
+            )}
           </div>
 
           <div style={styles.title}>{user.nickname} 님</div>
@@ -313,9 +385,9 @@ const MyPage = () => {
           </button>
 
           <div style={styles.hint}>
-            현재는 카카오 OAuth 연동 전 단계이며,
+            카카오 계정으로 로그인되었습니다.
             <br />
-            UI/흐름 검증을 위한 더미 로그인입니다.
+            계약서와 분석 기록이 안전하게 저장됩니다.
           </div>
         </div>
       )}
