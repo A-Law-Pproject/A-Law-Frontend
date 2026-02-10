@@ -164,7 +164,7 @@ const CameraPage: React.FC = () => {
                     stream.getTracks().forEach(track => track.stop());
                 }
 
-                navigate('/contract/view', {state:{capturedImageData: dataUrl}});
+                navigate('/loading', {state:{capturedImageData: dataUrl}});
             }
         }
     }, [isCameraActive, capturedImage, navigate]);
