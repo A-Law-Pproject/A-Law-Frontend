@@ -77,20 +77,32 @@ const CameraPage: React.FC = () => {
         const startCamera = async () => {
             if (capturedImage) return;
             try {
-                const constraints: MediaStreamConstraints = {
+                // 후면 카메라 우선 시도 (모바일)
+                stream = await navigator.mediaDevices.getUserMedia({
                     audio: false,
                     video: {
-                        width: 720,
-                        height: 1280
+                        facingMode: { exact: 'environment' },
+                        width: { ideal: 1080 },
+                        height: { ideal: 1920 },
+                        aspectRatio: { ideal: 9 / 16 },
                     }
-                };
+                });
+            } catch {
+                // 후면 카메라 없을 경우 기본 카메라로 fallback (데스크톱/디버그)
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                        width: { ideal: 1080 },
+                        height: { ideal: 1920 },
+                    }
+                });
+            }
 
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-
+            try {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                     videoRef.current.play();
-                    setError(null); 
+                    setError(null);
                     setIsCameraActive(true);
                 }
             } catch (err) {
