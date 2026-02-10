@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import AlbumIcon from '../../assets/icons/album.png';
 import CameraIcon from '../../assets/icons/camera.png';
 import { FaArrowLeft } from 'react-icons/fa';
-import { isKakaoLoggedIn } from '../../services/kakaoAuth';
+import { isKakaoLoggedIn } from '../../services/kakaoAuth.js';
 
 const ScanPage = () => {
   const navigate = useNavigate();
