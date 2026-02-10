@@ -77,20 +77,24 @@ const CameraPage: React.FC = () => {
         const startCamera = async () => {
             if (capturedImage) return;
             try {
-                const constraints: MediaStreamConstraints = {
+                // 후면 카메라 우선 시도 (모바일)
+                stream = await navigator.mediaDevices.getUserMedia({
                     audio: false,
-                    video: {
-                        width: 720,
-                        height: 1280
-                    }
-                };
+                    video: { facingMode: { exact: 'environment' } }
+                });
+            } catch {
+                // 후면 카메라 없을 경우 기본 카메라 (데스크톱/디버그)
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: true
+                });
+            }
 
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-
+            try {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                     videoRef.current.play();
-                    setError(null); 
+                    setError(null);
                     setIsCameraActive(true);
                 }
             } catch (err) {
@@ -119,13 +123,25 @@ const CameraPage: React.FC = () => {
                 return;
             }
 
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // 비디오가 가로(landscape)일 경우, 세로(portrait) 비율로 중앙 크롭
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            const isLandscape = vw > vh;
+
+            let sx = 0, sy = 0, sw = vw, sh = vh;
+            if (isLandscape) {
+                // 9:16 비율로 중앙 크롭
+                sw = vh * (9 / 16);
+                sx = (vw - sw) / 2;
+            }
+
+            canvas.width = isLandscape ? sw : vw;
+            canvas.height = isLandscape ? vh : vh;
 
             const context = canvas.getContext('2d');
-            
+
             if (context) {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
                 // == API 호출 영역 ==
                 // canvas.toBlob(async (blob)=>{
@@ -182,13 +198,14 @@ const CameraPage: React.FC = () => {
             <div style={{ position: 'relative', width: '100%', maxWidth: '600px', margin: '0 0 20px 0' }}>
                  <video
                     ref={videoRef}
-                    style={{ 
-                        width: '80%', 
-                        border: '2px solid #333', 
+                    style={{
+                        width: '80%',
+                        aspectRatio: '9 / 16',
+                        objectFit: 'cover',
+                        border: '2px solid #333',
                         borderRadius: '10px',
                         display: capturedImage ? 'none' : 'block',
-                        
-                        margin: '0 auto', // 가운데정렬
+                        margin: '0 auto',
                     }}
                     playsInline
                     autoPlay
