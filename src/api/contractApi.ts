@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getKakaoAccessToken } from '../services/kakaoAuth.js';
 import type {
+  ContractOCRResponse,
   ContractUploadResponse,
   OCRResultResponse,
   ExportImageRequest,
@@ -13,6 +14,7 @@ import type {
 
 // Re-export types for external use
 export type {
+  ContractOCRResponse,
   ContractUploadResponse,
   OCRResultResponse,
   ExportImageRequest,
@@ -60,11 +62,70 @@ apiClient.interceptors.response.use(
 );
 
 // ============================================
+// 유틸리티
+// ============================================
+
+/** data URL (canvas.toDataURL) → Blob 변환 */
+const dataURLtoBlob = (dataURL: string): Blob => {
+  const parts = dataURL.split(',');
+  const mime = parts[0]?.match(/:(.*?);/)?.[1] || 'image/png';
+  const binary = atob(parts[1] ?? '');
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+  return new Blob([array], { type: mime });
+};
+
+// ============================================
+// Mock 설정 — 백엔드 연동 시 USE_MOCK = false 로 변경
+// ============================================
+const USE_MOCK = true;
+
+const mockOCRResponse: ContractOCRResponse = {
+  status: 'ocr_complete',
+  task_id: 'JOB-20260213-001',
+  user_id: 7,
+  contract_id: 102,
+  ocr_data: {
+    full_text:
+      '제 1조 (목적)\n임차인은 본 계약 체결과 동시에 임대인에게 보증금 50,000,000원을 지급하며...\n\n제 2조 (월 차임)\n임차인은 매월 1일에 월 차임 1,200,000원을 지급하여야 하며...',
+  },
+  message: '원문 추출이 완료되었습니다. 심층 분석 결과는 웹소켓으로 전송됩니다.',
+};
+
+// ============================================
 // API 함수들
 // ============================================
 
 /**
- * 1. 계약서 업로드 및 분석 요청
+ * 1-a. 카메라 촬영 이미지 → OCR 업로드
+ * POST /api/v1/contracts  (multipart/form-data)
+ * 동기 응답: OCR 결과 + task_id (이후 비동기 분석은 WebSocket 수신)
+ */
+export const uploadContractImage = async (
+  capturedImageData: string,
+): Promise<ContractOCRResponse> => {
+  if (USE_MOCK) {
+    // Mock: 2초 지연 후 가짜 응답 반환
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('[MOCK] uploadContractImage 호출됨');
+    return mockOCRResponse;
+  }
+
+  const blob = dataURLtoBlob(capturedImageData);
+  const formData = new FormData();
+  formData.append('contract_image', blob, 'contract_capture.png');
+
+  const response = await apiClient.post<ContractOCRResponse>('/contracts', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return response.data;
+};
+
+/**
+ * 1-b. 계약서 파일 업로드 및 분석 요청
  * POST /api/v1/contracts
  * RabbitMQ를 통한 비동기 처리
  */
