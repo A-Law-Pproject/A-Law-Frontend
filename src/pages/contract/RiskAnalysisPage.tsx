@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import type { RiskAnalysis, ToxicTerm } from "../../services/socketService.js";
 
 interface Props {
-  onSelect: (text: string) => void;
   contractId?: string;
 }
 
@@ -50,7 +49,7 @@ const getRiskLevel = (score: number) => {
   return { label: "안전", color: "#27ae60", bg: "#eafaf1" };
 };
 
-function RiskAnalysisPage({ onSelect, contractId }: Props) {
+function RiskAnalysisPage({ contractId }: Props) {
   const [riskData, setRiskData] = useState<RiskAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -183,12 +182,7 @@ function RiskAnalysisPage({ onSelect, contractId }: Props) {
           return (
             <div
               key={idx}
-              onClick={() => {
-                handleToggle(term);
-                if (term.toxic_category) {
-                  onSelect(term.toxic_category);
-                }
-              }}
+              onClick={() => handleToggle(term)}
               style={{
                 padding: "14px",
                 marginBottom: idx < riskData.toxic_terms.length - 1 ? "10px" : 0,
