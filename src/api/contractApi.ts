@@ -217,9 +217,49 @@ export const convertFileToText = async (
  * 7. 위험 요소 분석
  * GET /api/v1/contracts/{id}/risks
  */
+const mockRiskResponse: ContractRiskResponse = {
+  contract_id: 102,
+  risk_analysis_id: 1,
+  total_risk_score: 75,
+  risk_level: "DANGER",
+  risk_items: [
+    {
+      clause_no: "제2조",
+      title: "임차인에게 불리한 조항",
+      description: "퇴실 시 청소비를 임차인에게 일방적으로 부담시키는 조항은 공정거래위원회의 불공정약관 기준에 해당할 수 있습니다.",
+      severity: "HIGH",
+      sources: "임차인은 퇴실시 청소비 20만원 있음.",
+      alternative_text: "퇴실 시 청소비는 임대인과 임차인이 협의하여 결정한다.",
+    },
+    {
+      clause_no: "제5조",
+      title: "보증금 반환 지연 위험",
+      description: "주택임대차보호법상 보증금은 임차인이 주택을 인도한 날에 반환하는 것이 원칙이며, 30일 유예는 임차인에게 불리할 수 있습니다.",
+      severity: "MEDIUM",
+      sources: "보증금은 퇴실 후 30일 이내 반환한다.",
+      alternative_text: "보증금은 임차인이 주택을 인도한 날에 반환한다.",
+    },
+    {
+      clause_no: "제7조",
+      title: "생활 규칙",
+      description: "애완동물 사육 금지 및 건물 내 금연 조항은 일반적인 생활 규칙으로 법적 위험이 낮습니다.",
+      severity: "LOW",
+      sources: "애완동물사육금지 및 건물내 금연",
+      alternative_text: "",
+    },
+  ],
+  analyzed_at: new Date().toISOString(),
+};
+
 export const getRiskAnalysis = async (
   contractId: string
 ): Promise<ContractRiskResponse> => {
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('[MOCK] getRiskAnalysis 호출됨, contractId:', contractId);
+    return mockRiskResponse;
+  }
+
   const response = await apiClient.get(`/contracts/${contractId}/risks`);
   return response.data;
 };

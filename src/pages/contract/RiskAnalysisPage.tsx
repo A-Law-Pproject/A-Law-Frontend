@@ -1,77 +1,77 @@
 import { useState, useEffect } from "react";
-import type { RiskAnalysis, ToxicTerm } from "../../services/socketService.js";
+import { getRiskAnalysis } from "../../api/contractApi.js";
+import type { ContractRiskResponse, RiskItem, RiskLevel, ContractRiskLevel } from "../../types/contract.js";
 
 interface Props {
   contractId?: string;
 }
 
-// ============================================
-// Mock 데이터 — 백엔드 연동 시 제거
-// ============================================
-const mockRiskAnalysis: RiskAnalysis = {
-  toxic_terms: [
-    {
-      index: 2,
-      content: "임차인은 퇴실시 청소비 20만원 있음.",
-      toxic_level: 2,
-      toxic_category: "임차인에게 불리한 조항",
-      toxic_reason: "퇴실 시 청소비를 임차인에게 일방적으로 부담시키는 조항은 공정거래위원회의 불공정약관 기준에 해당할 수 있습니다.",
-    },
-    {
-      index: 5,
-      content: "보증금은 퇴실 후 30일 이내 반환한다.",
-      toxic_level: 1,
-      toxic_category: "보증금 반환 지연 위험",
-      toxic_reason: "주택임대차보호법상 보증금은 임차인이 주택을 인도한 날에 반환하는 것이 원칙이며, 30일 유예는 임차인에게 불리할 수 있습니다.",
-    },
-    {
-      index: 7,
-      content: "애완동물사육금지 및 건물내 금연",
-      toxic_level: 0,
-      toxic_category: "",
-      toxic_reason: "",
-    },
-  ],
-  risk_score: 75,
+/** severity → 등급/색상 매핑 */
+const getSeverityStyle = (severity: RiskLevel) => {
+  switch (severity) {
+    case "HIGH":
+      return { label: "위험", color: "#e74c3c", bg: "#fdecea", border: "#f0d0d0" };
+    case "MEDIUM":
+      return { label: "주의", color: "#f39c12", bg: "#fef9e7", border: "#f5e6c8" };
+    case "LOW":
+      return { label: "안전", color: "#27ae60", bg: "#eafaf1", border: "#c8e6d0" };
+  }
 };
 
-/** toxic_level → 등급/색상 매핑 */
-const getToxicLevelStyle = (level: number) => {
-  if (level >= 2) return { label: "위험", color: "#e74c3c", bg: "#fdecea", border: "#f0d0d0" };
-  if (level >= 1) return { label: "주의", color: "#f39c12", bg: "#fef9e7", border: "#f5e6c8" };
-  return { label: "안전", color: "#27ae60", bg: "#eafaf1", border: "#c8e6d0" };
-};
-
-/** risk_score → 전체 등급 매핑 */
-const getRiskLevel = (score: number) => {
-  if (score >= 70) return { label: "위험", color: "#e74c3c", bg: "#fdecea" };
-  if (score >= 40) return { label: "주의", color: "#f39c12", bg: "#fef9e7" };
-  return { label: "안전", color: "#27ae60", bg: "#eafaf1" };
+/** risk_level → 전체 등급 매핑 */
+const getRiskLevelStyle = (level: ContractRiskLevel) => {
+  switch (level) {
+    case "DANGER":
+      return { label: "위험", color: "#e74c3c", bg: "#fdecea" };
+    case "CAUTION":
+      return { label: "주의", color: "#f39c12", bg: "#fef9e7" };
+    case "SAFE":
+      return { label: "안전", color: "#27ae60", bg: "#eafaf1" };
+  }
 };
 
 function RiskAnalysisPage({ contractId }: Props) {
-  const [riskData, setRiskData] = useState<RiskAnalysis | null>(null);
+  const [riskData, setRiskData] = useState<ContractRiskResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [initialLoading, setInitialLoading] = useState(true);
   const [expandedSet, setExpandedSet] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    // TODO: 실제 API 연동 시 getRiskAnalysis(contractId) 호출로 교체
     const timer = setTimeout(() => {
-      setRiskData(mockRiskAnalysis);
       setInitialLoading(false);
     }, 5000);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleToggle = (term: ToxicTerm) => {
+  useEffect(() => {
+    const fetchRiskAnalysis = async () => {
+      if (!contractId) return;
+
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const result = await getRiskAnalysis(contractId);
+        setRiskData(result);
+      } catch (err) {
+        console.error("위험 분석 실패:", err);
+        setError("위험 분석을 불러오는데 실패했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRiskAnalysis();
+  }, [contractId]);
+
+  const handleToggle = (idx: number) => {
     setExpandedSet(prev => {
       const next = new Set(prev);
-      if (next.has(term.index)) {
-        next.delete(term.index);
+      if (next.has(idx)) {
+        next.delete(idx);
       } else {
-        next.add(term.index);
+        next.add(idx);
       }
       return next;
     });
@@ -130,8 +130,8 @@ function RiskAnalysisPage({ contractId }: Props) {
     );
   }
 
-  const level = getRiskLevel(riskData.risk_score);
-  const dangerCount = riskData.toxic_terms.filter(t => t.toxic_level > 0).length;
+  const level = getRiskLevelStyle(riskData.risk_level);
+  const dangerCount = riskData.risk_items.filter(item => item.severity !== "LOW").length;
 
   return (
     <div className="page-container">
@@ -153,7 +153,7 @@ function RiskAnalysisPage({ contractId }: Props) {
           fontWeight: 700,
           color: level.color,
         }}>
-          {riskData.risk_score}
+          {riskData.total_risk_score}
         </span>
         <div>
           <span style={{
@@ -175,17 +175,17 @@ function RiskAnalysisPage({ contractId }: Props) {
 
       {/* 조항 목록 */}
       <div className="doc-box">
-        {riskData.toxic_terms.map((term: ToxicTerm, idx: number) => {
-          const style = getToxicLevelStyle(term.toxic_level);
-          const isExpanded = expandedSet.has(term.index);
+        {riskData.risk_items.map((item: RiskItem, idx: number) => {
+          const style = getSeverityStyle(item.severity);
+          const isExpanded = expandedSet.has(idx);
 
           return (
             <div
               key={idx}
-              onClick={() => handleToggle(term)}
+              onClick={() => handleToggle(idx)}
               style={{
                 padding: "14px",
-                marginBottom: idx < riskData.toxic_terms.length - 1 ? "10px" : 0,
+                marginBottom: idx < riskData.risk_items.length - 1 ? "10px" : 0,
                 border: `1px solid ${style.border}`,
                 borderRadius: "10px",
                 background: style.bg,
@@ -198,7 +198,7 @@ function RiskAnalysisPage({ contractId }: Props) {
                 alignItems: "center",
               }}>
                 <span style={{ fontSize: "14px", fontWeight: 600, flex: 1 }}>
-                  {term.content}
+                  {item.clause_no} — {item.title}
                 </span>
                 <span style={{
                   padding: "3px 8px",
@@ -214,14 +214,12 @@ function RiskAnalysisPage({ contractId }: Props) {
                 </span>
               </div>
 
-              {term.toxic_category && (
-                <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#666" }}>
-                  {term.toxic_category}
-                </p>
-              )}
+              <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#666" }}>
+                {item.sources}
+              </p>
 
-              {/* 펼침 영역: toxic_reason */}
-              {isExpanded && term.toxic_reason && (
+              {/* 펼침 영역: description + alternative_text */}
+              {isExpanded && (
                 <div style={{
                   marginTop: "10px",
                   padding: "10px 12px",
@@ -233,7 +231,13 @@ function RiskAnalysisPage({ contractId }: Props) {
                   color: "#333",
                 }}>
                   <strong style={{ color: style.color }}>분석 사유</strong>
-                  <p style={{ margin: "4px 0 0" }}>{term.toxic_reason}</p>
+                  <p style={{ margin: "4px 0 0" }}>{item.description}</p>
+                  {item.alternative_text && (
+                    <>
+                      <strong style={{ color: "#2980b9", display: "block", marginTop: "8px" }}>대안 문구</strong>
+                      <p style={{ margin: "4px 0 0" }}>{item.alternative_text}</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
