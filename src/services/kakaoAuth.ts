@@ -85,7 +85,7 @@ export const initKakao = async (): Promise<void> => {
 
 /**
  * 카카오 로그인 (SDK v2 — 리다이렉트 방식)
- * 로그인 후 /oauth/callback 으로 리다이렉트됨
+ * 백엔드 Spring Security OAuth2 엔드포인트로 직접 리다이렉트됨
  */
 export const loginWithKakao = async (): Promise<void> => {
   // SDK가 초기화되지 않은 경우 먼저 초기화 (버튼 클릭 타이밍 보장)
@@ -101,7 +101,7 @@ export const loginWithKakao = async (): Promise<void> => {
   console.log('🔵 카카오 로그인 리다이렉트 시작...');
 
   window.Kakao.Auth.authorize({
-    redirectUri: `${window.location.origin}/oauth/callback`,
+    redirectUri: 'https://api.a-law.site/login/oauth2/code/kakao',
   });
 };
 
