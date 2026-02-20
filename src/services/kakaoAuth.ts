@@ -87,9 +87,14 @@ export const initKakao = async (): Promise<void> => {
  * 카카오 로그인 (SDK v2 — 리다이렉트 방식)
  * 로그인 후 /oauth/callback 으로 리다이렉트됨
  */
-export const loginWithKakao = (): void => {
-  if (!window.Kakao) {
-    console.error('Kakao SDK not loaded');
+export const loginWithKakao = async (): Promise<void> => {
+  // SDK가 초기화되지 않은 경우 먼저 초기화 (버튼 클릭 타이밍 보장)
+  if (!window.Kakao?.isInitialized()) {
+    await initKakao();
+  }
+
+  if (!window.Kakao?.Auth) {
+    console.error('Kakao SDK Auth 모듈을 사용할 수 없습니다.');
     return;
   }
 

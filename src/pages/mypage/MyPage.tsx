@@ -247,11 +247,11 @@ const MyPage = () => {
     [kakaoUser]
   );
 
-  const handleKakaoLogin = () => {
+  const handleKakaoLogin = async () => {
     if (isAuthLoading) return;
     setIsAuthLoading(true);
     // SDK v2: 페이지 리다이렉트 방식 — /oauth/callback 에서 로그인 완료 처리
-    loginWithKakao();
+    await loginWithKakao();
   };
 
   const handleLogout = async () => {
