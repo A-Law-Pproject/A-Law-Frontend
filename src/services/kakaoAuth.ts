@@ -101,7 +101,7 @@ export const loginWithKakao = async (): Promise<void> => {
   console.log('🔵 카카오 로그인 리다이렉트 시작...');
 
   window.Kakao.Auth.authorize({
-    redirectUri: 'https://api.a-law.site/login/oauth2/code/kakao',
+    redirectUri: 'https://api.a-law.site/oauth2/authorization/kakao',
   });
 };
 
