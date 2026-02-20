@@ -6,7 +6,6 @@ import UserIcon from '../../assets/icons/user.png';
 import {
   initKakao,
   loginWithKakao,
-  dummyLogin,
   logoutKakao,
   getKakaoUser,
   isKakaoLoggedIn,
@@ -209,9 +208,7 @@ const styles = {
 
 const MyPage = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('isLoggedIn') === 'true';
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isKakaoLoggedIn());
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [kakaoUser, setKakaoUser] = useState<KakaoUserInfo | null>(null);
 
@@ -253,11 +250,8 @@ const MyPage = () => {
     setIsAuthLoading(true);
 
     try {
-      // TODO: 백엔드 구축 후 loginWithKakao()로 변경
-      const userInfo = await dummyLogin();
-      setKakaoUser(userInfo);
-      setIsLoggedIn(true);
-      console.log('카카오 로그인 성공:', userInfo);
+      await loginWithKakao();
+      // loginWithKakao()는 백엔드로 리다이렉트하므로 이후 코드는 실행되지 않음
     } catch (error) {
       console.error('카카오 로그인 실패:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
