@@ -10,6 +10,9 @@ declare global {
 // 카카오 앱 키 (환경변수에서 가져오기)
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 
+// API 기본 URL
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+
 // 쿠키 키 상수
 const COOKIE_KEYS = {
   ACCESS_TOKEN: 'kakao_access_token',
@@ -135,27 +138,34 @@ export const loginWithKakao = (): Promise<KakaoUserInfo> => {
 
 /**
  * 카카오 로그아웃
+ * 서버에 DELETE /api/v1/auth 요청을 보내 서버 측 쿠키를 삭제한 후 클라이언트 쿠키도 제거
  */
-export const logoutKakao = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (!window.Kakao || !window.Kakao.Auth.getAccessToken()) {
-      // 이미 로그아웃 상태 - 쿠키만 삭제
-      Cookies.remove(COOKIE_KEYS.USER_INFO, { path: '/' });
-      Cookies.remove(COOKIE_KEYS.ACCESS_TOKEN, { path: '/' });
-      console.log('✅ 쿠키가 삭제되었습니다.');
-      resolve();
-      return;
-    }
-
-    window.Kakao.Auth.logout(() => {
-      console.log('카카오 로그아웃 성공');
-      // 쿠키 삭제
-      Cookies.remove(COOKIE_KEYS.USER_INFO, { path: '/' });
-      Cookies.remove(COOKIE_KEYS.ACCESS_TOKEN, { path: '/' });
-      console.log('✅ 쿠키가 삭제되었습니다.');
-      resolve();
+export const logoutKakao = async (): Promise<void> => {
+  // 서버에 로그아웃 요청 (서버 측 쿠키 삭제)
+  try {
+    await fetch(`${BASE_URL}/auth`, {
+      method: 'DELETE',
+      credentials: 'include',
     });
-  });
+    console.log('✅ 서버 로그아웃 완료');
+  } catch (error) {
+    console.error('서버 로그아웃 요청 실패:', error);
+  }
+
+  // 클라이언트 쿠키 삭제
+  Cookies.remove(COOKIE_KEYS.USER_INFO, { path: '/' });
+  Cookies.remove(COOKIE_KEYS.ACCESS_TOKEN, { path: '/' });
+  console.log('✅ 클라이언트 쿠키가 삭제되었습니다.');
+
+  // Kakao SDK 로그아웃 (SDK가 초기화되어 있는 경우)
+  if (window.Kakao?.Auth?.getAccessToken()) {
+    await new Promise<void>((resolve) => {
+      window.Kakao.Auth.logout(() => {
+        console.log('✅ 카카오 SDK 로그아웃 완료');
+        resolve();
+      });
+    });
+  }
 };
 
 /**
