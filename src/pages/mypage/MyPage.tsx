@@ -6,7 +6,6 @@ import UserIcon from '../../assets/icons/user.png';
 import {
   initKakao,
   loginWithKakao,
-  dummyLogin,
   logoutKakao,
   getKakaoUser,
   isKakaoLoggedIn,
@@ -253,8 +252,7 @@ const MyPage = () => {
     setIsAuthLoading(true);
 
     try {
-      // TODO: 백엔드 구축 후 loginWithKakao()로 변경
-      const userInfo = await dummyLogin();
+      const userInfo = await loginWithKakao();
       setKakaoUser(userInfo);
       setIsLoggedIn(true);
       console.log('카카오 로그인 성공:', userInfo);
