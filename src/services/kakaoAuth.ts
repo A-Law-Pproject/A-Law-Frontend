@@ -11,7 +11,8 @@ declare global {
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 
 // API 기본 URL
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:3000/api/v1';
+const isSecureUrl = (url: string) => url.startsWith('https://') || url.startsWith('/');
 
 // 쿠키 키 상수
 const COOKIE_KEYS = {
@@ -124,11 +125,16 @@ export const saveKakaoSession = (accessToken: string, userInfo: KakaoUserInfo): 
 export const logoutKakao = async (): Promise<void> => {
   // 서버에 로그아웃 요청 (서버 측 쿠키 삭제)
   try {
-    await fetch(`${BASE_URL}/auth`, {
+    const response = await fetch(`${BASE_URL}/auth`, {
       method: 'DELETE',
-      credentials: 'include',
+      credentials: isSecureUrl(BASE_URL) ? 'include' : 'omit',
     });
-    console.log('✅ 서버 로그아웃 완료');
+    if (response.ok) {
+      console.log('✅ 서버 로그아웃 완료');
+    } else {
+      const body = await response.text();
+      console.error(`서버 로그아웃 실패: ${response.status}`, body);
+    }
   } catch (error) {
     console.error('서버 로그아웃 요청 실패:', error);
   }
@@ -140,12 +146,12 @@ export const logoutKakao = async (): Promise<void> => {
 
   // Kakao SDK 로그아웃 (SDK가 초기화되어 있는 경우)
   if (window.Kakao?.Auth?.getAccessToken()) {
-    await new Promise<void>((resolve) => {
-      window.Kakao.Auth.logout(() => {
-        console.log('✅ 카카오 SDK 로그아웃 완료');
-        resolve();
-      });
-    });
+    try {
+      await window.Kakao.Auth.logout();
+      console.log('✅ 카카오 SDK 로그아웃 완료');
+    } catch (error) {
+      console.error('카카오 SDK 로그아웃 실패:', error);
+    }
   }
 };
 
