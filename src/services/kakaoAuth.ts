@@ -10,6 +10,10 @@ declare global {
 // 카카오 앱 키 (환경변수에서 가져오기)
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 
+// API 기본 URL
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:3000/api/v1';
+const isSecureUrl = (url: string) => url.startsWith('https://') || url.startsWith('/');
+
 // 쿠키 키 상수
 const COOKIE_KEYS = {
   ACCESS_TOKEN: 'kakao_access_token',
@@ -116,30 +120,39 @@ export const saveKakaoSession = (accessToken: string, userInfo: KakaoUserInfo): 
 
 /**
  * 카카오 로그아웃
+ * 서버에 DELETE /api/v1/auth 요청을 보내 서버 측 쿠키를 삭제한 후 클라이언트 쿠키도 제거
  */
-const clearAllCookies = () => {
+export const logoutKakao = async (): Promise<void> => {
+  // 서버에 로그아웃 요청 (서버 측 쿠키 삭제)
+  try {
+    const response = await fetch(`${BASE_URL}/auth`, {
+      method: 'DELETE',
+      credentials: isSecureUrl(BASE_URL) ? 'include' : 'omit',
+    });
+    if (response.ok) {
+      console.log('✅ 서버 로그아웃 완료');
+    } else {
+      const body = await response.text();
+      console.error(`서버 로그아웃 실패: ${response.status}`, body);
+    }
+  } catch (error) {
+    console.error('서버 로그아웃 요청 실패:', error);
+  }
+
+  // 클라이언트 쿠키 삭제
   Cookies.remove(COOKIE_KEYS.USER_INFO, { path: '/' });
   Cookies.remove(COOKIE_KEYS.ACCESS_TOKEN, { path: '/' });
-  Cookies.remove('access_token', { path: '/' });
-  Cookies.remove('refresh_token', { path: '/' });
-  Cookies.remove('is_logged_in', { path: '/' });
-  console.log('✅ 쿠키가 삭제되었습니다.');
-};
+  console.log('✅ 클라이언트 쿠키가 삭제되었습니다.');
 
-export const logoutKakao = (): Promise<void> => {
-  return new Promise((resolve) => {
-    if (!window.Kakao || !window.Kakao.Auth.getAccessToken()) {
-      clearAllCookies();
-      resolve();
-      return;
+  // Kakao SDK 로그아웃 (SDK가 초기화되어 있는 경우)
+  if (window.Kakao?.Auth?.getAccessToken()) {
+    try {
+      await window.Kakao.Auth.logout();
+      console.log('✅ 카카오 SDK 로그아웃 완료');
+    } catch (error) {
+      console.error('카카오 SDK 로그아웃 실패:', error);
     }
-
-    window.Kakao.Auth.logout(() => {
-      console.log('카카오 로그아웃 성공');
-      clearAllCookies();
-      resolve();
-    });
-  });
+  }
 };
 
 /**
