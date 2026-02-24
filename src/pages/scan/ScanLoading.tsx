@@ -27,23 +27,35 @@ const ScanLoading = () => {
 
         if (cancelled) return;
 
-        if (ocrResult.status === 'ocr_complete') {
+        if (ocrResult.success) {
           navigate('/contract/view', {
             state: {
               capturedImageData,
               taskId: ocrResult.task_id,
               contractId: ocrResult.contract_id,
-              ocrText: ocrResult.ocr_data.full_text,
+              ocrText: ocrResult.full_text,
             },
             replace: true,
           });
         } else {
-          navigate('/scan/failed', { replace: true });
+          navigate('/scan/failed', { state: { errorReason: 'ocr_error' }, replace: true });
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('OCR 업로드 실패:', error);
         if (!cancelled) {
-          navigate('/scan/failed', { replace: true });
+          let errorReason = 'server_error';
+          if (
+            error &&
+            typeof error === 'object' &&
+            'response' in error &&
+            (error as { response?: { status?: number } }).response?.status !== undefined
+          ) {
+            const status = (error as { response: { status: number } }).response.status;
+            if (status === 400 || status === 415) {
+              errorReason = 'invalid_format';
+            }
+          }
+          navigate('/scan/failed', { state: { errorReason }, replace: true });
         }
       }
     };

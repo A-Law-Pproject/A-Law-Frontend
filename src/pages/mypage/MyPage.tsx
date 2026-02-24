@@ -208,9 +208,7 @@ const styles = {
 
 const MyPage = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('isLoggedIn') === 'true';
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isKakaoLoggedIn());
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [kakaoUser, setKakaoUser] = useState<KakaoUserInfo | null>(null);
 
@@ -241,7 +239,6 @@ const MyPage = () => {
   const user = useMemo(
     () => ({
       nickname: kakaoUser?.nickname || '사용자',
-      note: kakaoUser ? '카카오톡 계정으로 로그인되었습니다.' : '로그인 상태(더미)입니다.',
       profileImage: kakaoUser?.profileImage,
     }),
     [kakaoUser]
@@ -252,10 +249,8 @@ const MyPage = () => {
     setIsAuthLoading(true);
 
     try {
-      const userInfo = await loginWithKakao();
-      setKakaoUser(userInfo);
-      setIsLoggedIn(true);
-      console.log('카카오 로그인 성공:', userInfo);
+      await loginWithKakao();
+      // 리다이렉트 방식이므로 이후 코드는 실행되지 않음
     } catch (error) {
       console.error('카카오 로그인 실패:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
@@ -370,7 +365,7 @@ const MyPage = () => {
           </div>
 
           <div style={styles.title}>{user.nickname} 님</div>
-          <div style={styles.desc}>{user.note}</div>
+          <div style={styles.desc}>카카오톡 계정으로 로그인되었습니다.</div>
 
           <button
             style={styles.secondaryBtn}
