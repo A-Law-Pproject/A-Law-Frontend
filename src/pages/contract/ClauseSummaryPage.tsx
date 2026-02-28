@@ -1,64 +1,72 @@
-import { useState, useEffect } from "react";
-import { generateSummary } from "../../api/contractApi.js";
+import type { AnalysisSummaryEvent } from "../../types/contract.js";
 
 interface Props {
   onSelect: (text: string) => void;
-  contractId?: string; // 계약서 ID
+  summaryData: AnalysisSummaryEvent | null;
 }
 
-function ClauseSummaryPage({ onSelect: _onSelect, contractId }: Props) {
-  const [summary, setSummary] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+function ClauseSummaryPage({ onSelect: _onSelect, summaryData }: Props) {
+  if (!summaryData) {
+    return (
+      <div className="page-container">
+        <h2 className="page-title">임대차 계약 요약</h2>
+        <p className="page-caption">AI가 임대차 계약 내용을 이해하기 쉽게 요약했습니다.</p>
+        <div className="doc-box ai-content-fadein">
+          <p style={{ color: "#999", fontStyle: "italic" }}>분석 데이터가 없습니다.</p>
+        </div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    const fetchSummary = async () => {
-      if (!contractId) return;
-
-      setIsLoading(true);
-      setError("");
-
-      try {
-        const result = await generateSummary(contractId);
-        setSummary(result.summary_content);
-      } catch (err) {
-        console.error("요약 생성 실패:", err);
-        setError("요약을 불러오는데 실패했습니다.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSummary();
-  }, [contractId]);
+  const { contract_data } = summaryData;
 
   return (
     <div className="page-container">
       <h2 className="page-title">임대차 계약 요약</h2>
       <p className="page-caption">AI가 임대차 계약 내용을 이해하기 쉽게 요약했습니다.</p>
 
-      {!contractId ? (
-        <div className="doc-box ai-content-fadein">
-          <p style={{ color: "#999", fontStyle: "italic" }}>계약서 ID가 필요합니다.</p>
-        </div>
-      ) : isLoading ? (
-        <div className="ai-loading-container">
-          <div className="ai-loading-icon">🔍</div>
-          <p className="ai-loading-text">AI가 계약서를 요약하고 있어요</p>
-          <p className="ai-loading-subtext">핵심 조항을 분석하는 중입니다...</p>
-          <div className="ai-loading-dots">
-            <span></span><span></span><span></span>
+      <div className="doc-box ai-content-fadein">
+        {/* 계약 유형 */}
+        <p style={{ fontWeight: 600, marginBottom: "12px" }}>
+          계약 유형: {contract_data.contract_type}
+        </p>
+
+        {/* 임대인 / 임차인 */}
+        <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 600, fontSize: "13px", color: "#555", marginBottom: "4px" }}>임대인</p>
+            <p style={{ fontSize: "13px" }}>{contract_data.lessor.name}</p>
+            <p style={{ fontSize: "12px", color: "#777" }}>{contract_data.lessor.address}</p>
+            <p style={{ fontSize: "12px", color: "#777" }}>{contract_data.lessor.phone}</p>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 600, fontSize: "13px", color: "#555", marginBottom: "4px" }}>임차인</p>
+            <p style={{ fontSize: "13px" }}>{contract_data.lessee.name}</p>
+            <p style={{ fontSize: "12px", color: "#777" }}>{contract_data.lessee.address}</p>
+            <p style={{ fontSize: "12px", color: "#777" }}>{contract_data.lessee.phone}</p>
           </div>
         </div>
-      ) : error ? (
-        <div className="doc-box ai-content-fadein">
-          <p style={{ color: "#e74c3c" }}>{error}</p>
-        </div>
-      ) : summary ? (
-        <div className="doc-box ai-content-fadein">
-          <p>{summary}</p>
-        </div>
-      ) : null}
+
+        {/* 특약 사항 */}
+        {contract_data.special_terms.length > 0 && (
+          <>
+            <p style={{ fontWeight: 600, fontSize: "13px", color: "#555", marginBottom: "8px" }}>특약 사항</p>
+            {contract_data.special_terms.map((term) => (
+              <div key={term.index} style={{
+                padding: "10px 12px",
+                borderRadius: "8px",
+                background: "#f8f8f8",
+                marginBottom: "8px",
+                fontSize: "13px",
+                lineHeight: "1.6",
+              }}>
+                <span style={{ fontWeight: 600, marginRight: "6px" }}>{term.index}.</span>
+                {term.content}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }

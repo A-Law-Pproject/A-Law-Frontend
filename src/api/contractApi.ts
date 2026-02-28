@@ -2,31 +2,30 @@ import axios from 'axios';
 import { getKakaoAccessToken } from '../services/kakaoAuth.js';
 import type {
   ContractOCRResponse,
-  ContractUploadResponse,
   OCRResultResponse,
   ExportImageRequest,
   ExportImageResponse,
-  ContractSummaryResponse,
   EasyExplanationRequest,
   EasyExplanationResponse,
-  ContractRiskResponse,
+  AnalysisSSECallbacks,
 } from '../types/contract.js';
 
 // Re-export types for external use
 export type {
   ContractOCRResponse,
-  ContractUploadResponse,
   OCRResultResponse,
   ExportImageRequest,
   ExportImageResponse,
-  ContractSummaryResponse,
   EasyExplanationRequest,
   EasyExplanationResponse,
-  ContractRiskResponse,
+  AnalysisSSECallbacks,
 };
 
 // API Base URL - 환경변수로 관리하는 것을 권장
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.a-law.site/api/v1';
+
+// SSE 엔드포인트용 origin (ex: https://api.a-law.site)
+const SSE_ORIGIN = BASE_URL.replace(/\/api\/v1$/, '');
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
@@ -82,16 +81,16 @@ const dataURLtoBlob = (dataURL: string): Blob => {
 // ============================================
 
 /**
- * 1-a. 카메라 촬영 이미지 → OCR 업로드
+ * 1번. 카메라 촬영 이미지 → OCR 업로드
  * POST /api/v1/contracts  (multipart/form-data)
- * 동기 응답: OCR 결과 + task_id (이후 비동기 분석은 WebSocket 수신)
+ * 동기 응답: OCR 결과 + s3_key (이후 비동기 분석은 SSE 수신)
  */
 export const uploadContractImage = async (
   capturedImageData: string,
 ): Promise<ContractOCRResponse> => {
   const blob = dataURLtoBlob(capturedImageData);
   const formData = new FormData();
-  formData.append('contract_image', blob, 'contract_capture.png');
+  formData.append('file', blob, 'contract_capture.png');
 
   const response = await apiClient.post<ContractOCRResponse>('/contracts', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -101,36 +100,30 @@ export const uploadContractImage = async (
 };
 
 /**
- * 1-b. 계약서 파일 업로드 및 분석 요청
- * POST /api/v1/contracts
- * RabbitMQ를 통한 비동기 처리
+ * 2번. 텍스트 → 이미지 전환
+ * POST /api/v1/contracts/{id}/image
  */
-export const uploadContract = async (file: File): Promise<ContractUploadResponse> => {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const response = await apiClient.post('/contracts', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-
-  return response.data;
-};
-
-/**
- * 2. 계약서 간단 요약 생성 (on-demand)
- * POST /api/v1/contracts/{id}/summaries
- */
-export const generateSummary = async (
+export const getOCRResult = async (
   contractId: string
-): Promise<ContractSummaryResponse> => {
-  const response = await apiClient.post(`/contracts/${contractId}/summaries`);
+): Promise<OCRResultResponse> => {
+  const response = await apiClient.post(`/contracts/${contractId}/image`);
   return response.data;
 };
 
 /**
- * 3. 특정 문장 쉬운 말로 설명
+ * 3번. 이미지 → 텍스트 전환 (내보내기)
+ * POST /api/v1/contracts/{id}/text
+ */
+export const exportToImage = async (
+  contractId: string,
+  request: ExportImageRequest
+): Promise<ExportImageResponse> => {
+  const response = await apiClient.post(`/contracts/${contractId}/text`, request);
+  return response.data;
+};
+
+/**
+ * 5번. 특정 문장 쉬운 말로 설명
  * POST /api/v1/contracts/{id}/easy-explanation
  */
 export const generateEasyExplanation = async (
@@ -148,55 +141,49 @@ export const generateEasyExplanation = async (
 };
 
 /**
- * 4. OCR 결과 조회
- * GET /api/v1/contracts/{id}/image
+ * 4번. 계약서 분석 SSE 구독 (인증 불필요)
+ * GET /api/analysis/subscribe?s3Key={s3Key}
+ *
+ * 이벤트 종류:
+ *   summary_complete  - 요약 분석 완료
+ *   risk_complete     - 리스크 분석 완료
+ *   analysis_complete - 전체 분석 완료 → 자동으로 구독 종료
+ *   analysis_failed   - 분석 실패 → 자동으로 구독 종료
+ *
+ * @returns EventSource — 호출측에서 .close()로 구독을 직접 종료할 수 있음
  */
-export const getOCRResult = async (
-  contractId: string
-): Promise<OCRResultResponse> => {
-  const response = await apiClient.get(`/contracts/${contractId}/image`);
-  return response.data;
+export const subscribeAnalysisSSE = (
+  s3Key: string,
+  callbacks: AnalysisSSECallbacks,
+): EventSource => {
+  const url = `${SSE_ORIGIN}/api/analysis/subscribe?s3Key=${encodeURIComponent(s3Key)}`;
+  const eventSource = new EventSource(url);
+
+  eventSource.addEventListener('summary_complete', (e) => {
+    const data = JSON.parse((e as MessageEvent).data);
+    callbacks.onSummaryComplete(data);
+  });
+
+  eventSource.addEventListener('risk_complete', (e) => {
+    const data = JSON.parse((e as MessageEvent).data);
+    callbacks.onRiskComplete(data);
+  });
+
+  eventSource.addEventListener('analysis_complete', () => {
+    callbacks.onComplete();
+    eventSource.close();
+  });
+
+  eventSource.addEventListener('analysis_failed', (e) => {
+    const data = JSON.parse((e as MessageEvent).data);
+    callbacks.onFailed(data);
+    eventSource.close();
+  });
+
+  eventSource.onerror = (error) => {
+    callbacks.onError(error);
+    eventSource.close();
+  };
+
+  return eventSource;
 };
-
-// /**
-//  * 5. 이미지/PDF 내보내기
-//  * POST /api/v1/contracts/{id}/text
-//  */
-// export const exportToImage = async (
-//   contractId: string,
-//   request: ExportImageRequest
-// ): Promise<ExportImageResponse> => {
-//   const response = await apiClient.post(`/contracts/${contractId}/text`, request);
-//   return response.data;
-// };
-
-// /**
-//  * 6. PDF/이미지 → 텍스트 변환 (업로드)
-//  * POST /api/v1/contracts/{id}/text
-//  */
-// export const convertFileToText = async (
-//   contractId: string,
-//   uploadedFile: File
-// ): Promise<{ textContent: string }> => {
-//   const formData = new FormData();
-//   formData.append('uploadedFile', uploadedFile);
-
-//   const response = await apiClient.post(`/contracts/${contractId}/text`, formData, {
-//     headers: {
-//       'Content-Type': 'multipart/form-data',
-//     },
-//   });
-//   return response.data;
-// };
-
-/**
- * 7. 위험 요소 분석
- * GET /api/v1/contracts/{id}/risks
- */
-export const getRiskAnalysis = async (
-  contractId: string
-): Promise<ContractRiskResponse> => {
-  const response = await apiClient.get(`/contracts/${contractId}/risks`);
-  return response.data;
-};
-

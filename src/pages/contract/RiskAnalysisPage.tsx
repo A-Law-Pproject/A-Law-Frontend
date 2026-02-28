@@ -1,61 +1,31 @@
-import { useState, useEffect } from "react";
-import { getRiskAnalysis } from "../../api/contractApi.js";
-import type { ContractRiskResponse, RiskItem, RiskLevel, ContractRiskLevel } from "../../types/contract.js";
+import { useState } from "react";
+import type { AnalysisRiskEvent } from "../../types/contract.js";
 
 interface Props {
-  contractId?: string;
+  riskData: AnalysisRiskEvent | null;
 }
 
-/** severity → 등급/색상 매핑 */
-const getSeverityStyle = (severity: RiskLevel) => {
-  switch (severity) {
-    case "HIGH":
+/** toxic_level → 등급/색상 매핑 (0=안전, 1=주의, 2=위험) */
+const getLevelStyle = (toxicLevel: 0 | 1 | 2) => {
+  switch (toxicLevel) {
+    case 2:
       return { label: "위험", color: "#e74c3c", bg: "#fdecea", border: "#f0d0d0" };
-    case "MEDIUM":
+    case 1:
       return { label: "주의", color: "#f39c12", bg: "#fef9e7", border: "#f5e6c8" };
-    case "LOW":
+    case 0:
       return { label: "안전", color: "#27ae60", bg: "#eafaf1", border: "#c8e6d0" };
   }
 };
 
-/** risk_level → 전체 등급 매핑 */
-const getRiskLevelStyle = (level: ContractRiskLevel) => {
-  switch (level) {
-    case "DANGER":
-      return { label: "위험", color: "#e74c3c", bg: "#fdecea" };
-    case "CAUTION":
-      return { label: "주의", color: "#f39c12", bg: "#fef9e7" };
-    case "SAFE":
-      return { label: "안전", color: "#27ae60", bg: "#eafaf1" };
-  }
+/** risk_score → 전체 등급 매핑 */
+const getOverallStyle = (score: number) => {
+  if (score >= 70) return { label: "위험", color: "#e74c3c", bg: "#fdecea" };
+  if (score >= 40) return { label: "주의", color: "#f39c12", bg: "#fef9e7" };
+  return { label: "안전", color: "#27ae60", bg: "#eafaf1" };
 };
 
-function RiskAnalysisPage({ contractId }: Props) {
-  const [riskData, setRiskData] = useState<ContractRiskResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+function RiskAnalysisPage({ riskData }: Props) {
   const [expandedSet, setExpandedSet] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    const fetchRiskAnalysis = async () => {
-      if (!contractId) return;
-
-      setIsLoading(true);
-      setError("");
-
-      try {
-        const result = await getRiskAnalysis(contractId);
-        setRiskData(result);
-      } catch (err) {
-        console.error("위험 분석 실패:", err);
-        setError("위험 분석을 불러오는데 실패했습니다.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRiskAnalysis();
-  }, [contractId]);
 
   const handleToggle = (idx: number) => {
     setExpandedSet(prev => {
@@ -69,49 +39,21 @@ function RiskAnalysisPage({ contractId }: Props) {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="page-container">
-        <h2 className="page-title">위험 요소 분석</h2>
-        <p className="page-caption">임대차 계약에서 분쟁 가능성이 있는 부분을 분석했습니다.</p>
-        <div className="ai-loading-container">
-          <div className="ai-loading-icon">🛡️</div>
-          <p className="ai-loading-text">AI가 위험 요소를 분석하고 있어요</p>
-          <p className="ai-loading-subtext">분쟁 가능성이 있는 조항을 검토하는 중입니다...</p>
-          <div className="ai-loading-dots">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="page-container">
-        <h2 className="page-title">위험 요소 분석</h2>
-        <p className="page-caption">임대차 계약에서 분쟁 가능성이 있는 부분을 분석했습니다.</p>
-        <div className="doc-box ai-content-fadein">
-          <p style={{ color: "#e74c3c" }}>{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!riskData) {
     return (
       <div className="page-container">
         <h2 className="page-title">위험 요소 분석</h2>
         <p className="page-caption">임대차 계약에서 분쟁 가능성이 있는 부분을 분석했습니다.</p>
         <div className="doc-box ai-content-fadein">
-          <p style={{ color: "#999", fontStyle: "italic" }}>데이터가 없습니다.</p>
+          <p style={{ color: "#999", fontStyle: "italic" }}>분석 데이터가 없습니다.</p>
         </div>
       </div>
     );
   }
 
-  const level = getRiskLevelStyle(riskData.risk_level);
-  const dangerCount = riskData.risk_items.filter(item => item.severity !== "LOW").length;
+  const { risk_analysis } = riskData;
+  const overall = getOverallStyle(risk_analysis.risk_score);
+  const dangerCount = risk_analysis.toxic_terms.filter(t => t.toxic_level > 0).length;
 
   return (
     <div className="page-container">
@@ -125,15 +67,11 @@ function RiskAnalysisPage({ contractId }: Props) {
         gap: "12px",
         padding: "14px 18px",
         borderRadius: "12px",
-        background: level.bg,
+        background: overall.bg,
         marginBottom: "16px",
       }}>
-        <span style={{
-          fontSize: "28px",
-          fontWeight: 700,
-          color: level.color,
-        }}>
-          {riskData.total_risk_score}
+        <span style={{ fontSize: "28px", fontWeight: 700, color: overall.color }}>
+          {risk_analysis.risk_score}
         </span>
         <div>
           <span style={{
@@ -143,9 +81,9 @@ function RiskAnalysisPage({ contractId }: Props) {
             fontSize: "13px",
             fontWeight: 600,
             color: "#fff",
-            background: level.color,
+            background: overall.color,
           }}>
-            {level.label}
+            {overall.label}
           </span>
           <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#555" }}>
             총 {dangerCount}개의 위험 조항이 발견되었습니다.
@@ -155,8 +93,8 @@ function RiskAnalysisPage({ contractId }: Props) {
 
       {/* 조항 목록 */}
       <div className="doc-box">
-        {riskData.risk_items.map((item: RiskItem, idx: number) => {
-          const style = getSeverityStyle(item.severity);
+        {risk_analysis.toxic_terms.map((term, idx) => {
+          const style = getLevelStyle(term.toxic_level);
           const isExpanded = expandedSet.has(idx);
 
           return (
@@ -165,20 +103,16 @@ function RiskAnalysisPage({ contractId }: Props) {
               onClick={() => handleToggle(idx)}
               style={{
                 padding: "14px",
-                marginBottom: idx < riskData.risk_items.length - 1 ? "10px" : 0,
+                marginBottom: idx < risk_analysis.toxic_terms.length - 1 ? "10px" : 0,
                 border: `1px solid ${style.border}`,
                 borderRadius: "10px",
                 background: style.bg,
                 cursor: "pointer",
               }}
             >
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "14px", fontWeight: 600, flex: 1 }}>
-                  {item.clause_no} — {item.title}
+                  {term.index}번 조항 — {term.toxic_category || "일반 조항"}
                 </span>
                 <span style={{
                   padding: "3px 8px",
@@ -195,11 +129,10 @@ function RiskAnalysisPage({ contractId }: Props) {
               </div>
 
               <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#666" }}>
-                {item.sources}
+                {term.content}
               </p>
 
-              {/* 펼침 영역: description + alternative_text */}
-              {isExpanded && (
+              {isExpanded && term.toxic_reason && (
                 <div style={{
                   marginTop: "10px",
                   padding: "10px 12px",
@@ -211,13 +144,7 @@ function RiskAnalysisPage({ contractId }: Props) {
                   color: "#333",
                 }}>
                   <strong style={{ color: style.color }}>분석 사유</strong>
-                  <p style={{ margin: "4px 0 0" }}>{item.description}</p>
-                  {item.alternative_text && (
-                    <>
-                      <strong style={{ color: "#2980b9", display: "block", marginTop: "8px" }}>대안 문구</strong>
-                      <p style={{ margin: "4px 0 0" }}>{item.alternative_text}</p>
-                    </>
-                  )}
+                  <p style={{ margin: "4px 0 0" }}>{term.toxic_reason}</p>
                 </div>
               )}
             </div>

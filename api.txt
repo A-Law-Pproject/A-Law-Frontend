@@ -1,0 +1,268 @@
+## 전체 데이터 흐름
+
+```
+[카메라 촬영]
+    ↓
+1번 POST /api/v1/contracts
+    → OCR 완료 시 s3_key 수신
+    ↓
+4번 GET /api/analysis/subscribe?s3Key=... (SSE 구독 시작)
+    → summary_complete 이벤트 수신 → summaryData 저장
+    → risk_complete 이벤트 수신 → riskData 저장
+    → analysis_complete 이벤트 수신 → /contract/view로 이동
+         (state: { ocrText, summaryData, riskData, contractId })
+    ↓
+[요약 보기 페이지] summaryData 사용 (별도 API 호출 없음)
+[안전 분석 페이지] riskData 사용 (별도 API 호출 없음)
+```
+
+※ 새로고침 시 summaryData/riskData는 초기화됩니다. (현재 MVP 범위 외)
+
+---
+
+1)/api/v1/contracts
+-계약서 이미지 업로드 및 OCR 텍스트 추출
+-POST
+## Request (FormData):
+
+```json
+file: <File> // PNG, JPG 등의 계약서 파일
+```
+
+---
+
+## Response
+
+### 201 Created
+
+```json
+{
+  "status": "ocr_complete",
+  "task_id": "JOB-20260213-001",
+  "user_id": 7,
+  "contract_id": 102,
+  "s3_key": "contracts/uuid-abc123.png",
+  "ocr_data": {
+    "full_text": "제 1조 (목적) ... (계약서 전체 텍스트 내용)"
+  },
+  "message": "원문 추출이 완료되었습니다. 심층 분석 결과는 SSE로 전송됩니다."
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "status": "error",
+  "error_code": "INTERNAL_SERVER_ERROR",
+  "message": "서버의 오류로 인해 원문 추출에 실패했습니다. 잠시 후 다시 시도해주세요."
+}
+```
+
+### 400 Bad Request
+
+```json
+{
+  "status": "fail",
+  "error_code": "INVALID_FILE_FORMAT",
+  "message": "지원하지 않는 이미지 형식입니다. (png, jpg만 가능)"
+}
+```
+
+### 200 OK (OCR 실패)
+
+```json
+{
+  "status": "ocr_failed",
+  "task_id": "JOB-20260213-001",
+  "contract_id": 102,
+  "ocr_data": null,
+  "message": "이미지에서 텍스트를 추출할 수 없습니다. 화질을 확인해주세요."
+}
+```
+
+2)/api/v1/contracts/{id}/image
+-텍스트 → 이미지 전환
+-POST
+## Request
+
+```python
+Path Parameter: {id} = contract_id (예: 102)
+```
+
+## Response (200 OK)
+
+```json
+{
+  "contract_id": 102,
+  "status": "completed",
+  "transcription_result": {
+    "raw_text": "제 1조 (목적) 본 계약은 갑과 을 사이의...",
+    "confidence_score": 0.98,
+    "page_count": 3
+  },
+  "updated_at": "2026-01-08T13:00:00Z"
+}
+```
+
+3)/api/v1/contracts/{id}/text
+-이미지 → 텍스트 전환
+-POST
+## Request
+
+```json
+{
+  "target_resource": "analysis_report",
+  "format": "png",
+  "style_options": {
+    "theme": "dark",
+    "include_watermark": true
+  }
+}
+```
+
+## Response (201 Created)
+
+```json
+{
+  "export_id": "EXP-IMAGE-442",
+  "contract_id": 102,
+  "target": "analysis_report",
+  "file_url": "https://s3.ap-northeast-2.amazonaws.com/exports/102_report_v1.png",
+  "format": "png",
+  "expires_at": "2026-01-15T13:00:00Z"
+}
+```
+
+4)/api/analysis/subscribe (계약서 분석 SSE 구독)
+-[SSE 푸시] 요약 보기 / 리스크 분석
+-GET
+## 흐름
+
+- 1번 업로드 완료 후 s3_key를 받아 SSE 구독 시작
+- 백엔드가 AI 분석 진행 중 결과를 이벤트 단위로 실시간 전송
+- analysis_complete 이벤트 수신 시 구독 종료
+
+## Request
+
+```python
+Query Parameter: s3Key = 업로드된 계약서의 S3 키 (예: contracts/uuid-abc123.png)
+
+// 인증 불필요 (공개 엔드포인트)
+GET /api/analysis/subscribe?s3Key=contracts/uuid-abc123.png
+```
+
+## Response - SSE 이벤트
+
+### 요약 완료
+
+```json
+event: summary_complete
+data: {
+  "status": "summary_complete",
+  "task_id": "JOB-20260213-001",
+  "contract_data": {
+    "contract_type": "임대차",
+    "lessor": {
+      "name": "홍길동",
+      "resident_id": "",
+      "address": "경기도 수원시 ...",
+      "phone": "010-1234-5678"
+    },
+    "lessee": {
+      "name": "김철수",
+      "resident_id": "",
+      "address": "경기도 수원시 ...",
+      "phone": "010-1111-2222"
+    },
+    "terms": {
+      "deposit": 10000000
+    },
+    "special_terms": [
+      {
+        "index": 1,
+        "content": "현 시설물 상태의 임대차 계약이고..."
+      }
+    ]
+  },
+  "completed_at": "2026-02-13T14:32:00Z"
+}
+```
+
+### 리스크 분석 완료
+
+```json
+event: risk_complete
+data: {
+  "status": "risk_complete",
+  "task_id": "JOB-20260213-001",
+  "risk_analysis": {
+    "toxic_terms": [
+      {
+        "index": 2,
+        "content": "임차인은 퇴실시 청소비 20만원 있음.",
+        "toxic_level": 2,
+        "toxic_category": "임차인에게 불리한 조항",
+        "toxic_reason": "퇴실 시 청소비를 임차인에게 일방적으로 부담시키는 조항은 공정거래위원회의 불공정약관 기준에 해당할 수 있습니다."
+      },
+      {
+        "index": 7,
+        "content": "애완동물사육금지 및 건물내 금연",
+        "toxic_level": 0,
+        "toxic_category": "",
+        "toxic_reason": ""
+      }
+    ],
+    "risk_score": 75
+  }
+}
+
+// toxic_level
+// 0 = 위험하지 않음(하), 1 = 주의(중), 2 = 경고(상)
+```
+
+### 분석 완료 (구독 종료 시그널)
+
+```json
+event: analysis_complete
+data: {}
+```
+
+### 분석 실패
+
+```json
+event: analysis_failed
+data: {
+  "status": "analysis_failed",
+  "task_id": "JOB-20260213-001",
+  "error_code": "AI_TIMEOUT",
+  "message": "요약 분석 중 시간이 초과되었습니다. 계약서 원문만 확인 가능합니다."
+}
+```
+
+5)/api/v1/contracts/{id}/easy-explanation
+-특정 문장에 대한 쉬운 말 요약 자원 생성
+-POST
+## Request
+
+```json
+{
+  "original_sentence": "본 계약상 갑의 귀책사유로 인하여 계약이 해지될 경우 을은 기 수행한 용역에 대한 대가를 일할 계산하여 청구한다.",
+  "selection_range": { "start": 1205, "end": 1280 }
+}
+```
+
+## Response
+
+```json
+{
+  "explanation_id": "EXP-772",
+  "contract_id": 102,
+  "original_text": "본 계약상 갑의 귀책사유로 인하여 계약이 해지될 경우 을은 기 수행한 용역에 대한 대가를 일할 계산하여 청구한다.",
+  "easy_translation": "회사의 잘못으로 계약이 끝나더라도, 지금까지 일한 날짜만큼 계산해서 돈을 받을 수 있다는 뜻입니다.",
+  "legal_term_guide": [
+    { "term": "귀책사유", "meaning": "책임을 물을 수 있는 잘못된 원인" },
+    { "term": "일할 계산", "meaning": "날짜 수에 따라 비례해서 계산함" }
+  ]
+}
+```

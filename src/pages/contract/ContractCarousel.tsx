@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import type { AnalysisSummaryEvent, AnalysisRiskEvent } from "../../types/contract.js";
 
 import "./contractCarousel.css";
 import ContractOriginalPage from "./ContractOriginalPage.js";
@@ -19,8 +20,16 @@ const pages = [
 function ContractCarousel() {
   const navigate = useNavigate();
   const location = useLocation();
-  const locationState = location.state as { contractId?: number; capturedImageData?: string; ocrText?: string } | undefined;
+  const locationState = location.state as {
+    contractId?: number;
+    capturedImageData?: string;
+    ocrText?: string;
+    summaryData?: AnalysisSummaryEvent;
+    riskData?: AnalysisRiskEvent;
+  } | undefined;
   const contractId = locationState?.contractId != null ? String(locationState.contractId) : undefined;
+  const summaryData = locationState?.summaryData ?? null;
+  const riskData = locationState?.riskData ?? null;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedText, setSelectedText] = useState<string | null>(null);
@@ -447,13 +456,13 @@ function ContractCarousel() {
 
           <div className="carousel-page">
             <div style={pageStyle(1)}>
-              <ClauseSummaryPage onSelect={handleHighlightClick} {...(contractId ? { contractId } : {})} />
+              <ClauseSummaryPage onSelect={handleHighlightClick} summaryData={summaryData} />
             </div>
           </div>
 
           <div className="carousel-page">
             <div style={pageStyle(2)}>
-              <RiskAnalysisPage {...(contractId ? { contractId } : {})} />
+              <RiskAnalysisPage riskData={riskData} />
             </div>
           </div>
         </div>

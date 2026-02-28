@@ -6,7 +6,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 import LoadingIcon from '../../assets/icons/loading.png'
 import LoadingTips from './LoadingTips.js'
-import { uploadContractImage } from '../../api/contractApi.js';
+import { uploadContractImage, subscribeAnalysisSSE } from '../../api/contractApi.js';
+import type { AnalysisSummaryEvent, AnalysisRiskEvent } from '../../types/contract.js';
 
 const getRandomTip = () => LoadingTips[Math.floor(Math.random() * LoadingTips.length)];
 
@@ -21,24 +22,53 @@ const ScanLoading = () => {
 
     let cancelled = false;
 
+    let eventSource: EventSource | null = null;
+
+    let summaryData: AnalysisSummaryEvent | null = null;
+    let riskData: AnalysisRiskEvent | null = null;
+
+    const goToView = (ocrResult: Awaited<ReturnType<typeof uploadContractImage>>) => {
+      navigate('/contract/view', {
+        state: {
+          capturedImageData,
+          taskId: ocrResult.task_id,
+          contractId: ocrResult.contract_id,
+          ocrText: ocrResult.ocr_data?.full_text ?? '',
+          summaryData,
+          riskData,
+        },
+        replace: true,
+      });
+    };
+
     const processOCR = async () => {
       try {
         const ocrResult = await uploadContractImage(capturedImageData);
 
         if (cancelled) return;
 
-        if (ocrResult.success) {
-          navigate('/contract/view', {
-            state: {
-              capturedImageData,
-              taskId: ocrResult.task_id,
-              contractId: ocrResult.contract_id,
-              ocrText: ocrResult.full_text,
+        if (ocrResult.status !== 'ocr_complete') {
+          navigate('/scan/failed', { state: { errorReason: 'ocr_error' }, replace: true });
+          return;
+        }
+
+        // s3_key가 있으면 SSE 구독(4번)으로 분석 완료 대기, 없으면 바로 이동
+        if (ocrResult.s3_key) {
+          eventSource = subscribeAnalysisSSE(ocrResult.s3_key, {
+            onSummaryComplete: (data) => { summaryData = data; },
+            onRiskComplete: (data) => { riskData = data; },
+            onComplete: () => {
+              if (!cancelled) goToView(ocrResult);
             },
-            replace: true,
+            onFailed: () => {
+              if (!cancelled) goToView(ocrResult); // 분석 실패 시 OCR 결과만으로 이동
+            },
+            onError: () => {
+              if (!cancelled) goToView(ocrResult); // SSE 연결 실패 시 fallback
+            },
           });
         } else {
-          navigate('/scan/failed', { state: { errorReason: 'ocr_error' }, replace: true });
+          goToView(ocrResult);
         }
       } catch (error: unknown) {
         console.error('OCR 업로드 실패:', error);
@@ -62,7 +92,10 @@ const ScanLoading = () => {
 
     processOCR();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      eventSource?.close();
+    };
   }, [navigate, capturedImageData]);
 
   return (
