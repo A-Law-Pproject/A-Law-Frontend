@@ -121,7 +121,7 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
       {/* Greeting */}
       <div className="ms-greeting">
         안녕하세요!<br />
-        <em>계약서</em>를 분석해 드릴게요.
+        오늘도 <em>A-Law</em>에 오셨어요.
       </div>
 
       {/* Main Features */}
