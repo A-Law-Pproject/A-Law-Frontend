@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@esbuild/win32-x64": "^0.27.3",
     "@stomp/stompjs": "^7.3.0",
     "@types/kakao-js-sdk": "^1.39.5",
     "axios": "^1.13.5",

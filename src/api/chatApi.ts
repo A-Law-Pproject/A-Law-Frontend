@@ -13,6 +13,12 @@ export interface ChatMessage {
   content: string;
 }
 
+/** POST /api/chat/{contractId} 요청 바디 (spec #11) */
+export interface ChatRequest {
+  message: string;
+  history: ChatMessage[];
+}
+
 interface ChatSSECallbacks {
   /** 토큰(청크)이 도착할 때마다 호출 */
   onChunk: (chunk: string) => void;
@@ -27,11 +33,12 @@ interface ChatSSECallbacks {
 // ============================================
 
 /**
- * SSE 기반 챗봇 메시지 전송
- * POST /api/chat/{contractId}  (Accept: text/event-stream)
+ * [spec #11] SSE 스트리밍 챗봇 메시지 전송
+ * POST /api/chat/{contractId}
+ * Headers: Content-Type: application/json, Accept: text/event-stream, Authorization: Bearer {token}
  *
- * 서버가 토큰 단위로 스트리밍 응답을 보내면,
- * onChunk 콜백으로 실시간 전달합니다.
+ * 서버가 토큰 단위로 "data: <chunk>" 형식으로 스트리밍하고,
+ * 스트림 종료 시 "data: [DONE]" 시그널을 전송합니다.
  *
  * @returns AbortController — 호출측에서 abort()로 스트림을 중단할 수 있음
  */
@@ -45,6 +52,8 @@ export const sendChatMessageSSE = (
 
   const token = getKakaoAccessToken();
 
+  const body: ChatRequest = { message, history };
+
   fetch(`${CHAT_BASE_URL}/chat/${contractId}`, {
     method: 'POST',
     headers: {
@@ -53,7 +62,7 @@ export const sendChatMessageSSE = (
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify(body),
     signal: controller.signal,
   })
     .then(async (response) => {
