@@ -107,7 +107,7 @@ export interface AnalysisRiskEvent {
 }
 
 export interface AnalysisFailedEvent {
-  status: 'analysis_failed';
+  status: 'summary_failed' | 'risk_failed';
   task_id: string;
   error_code: string;
   message: string;
@@ -117,7 +117,8 @@ export interface AnalysisSSECallbacks {
   onSummaryComplete: (data: AnalysisSummaryEvent) => void;
   onRiskComplete: (data: AnalysisRiskEvent) => void;
   onComplete: () => void;
-  onFailed: (data: AnalysisFailedEvent) => void;
+  onSummaryFailed: (data: AnalysisFailedEvent) => void;
+  onRiskFailed: (data: AnalysisFailedEvent) => void;
   onError: (error: Event) => void;
 }
 

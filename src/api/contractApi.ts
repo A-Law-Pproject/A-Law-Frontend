@@ -174,9 +174,15 @@ export const subscribeAnalysisSSE = (
     eventSource.close();
   });
 
-  eventSource.addEventListener('analysis_failed', (e) => {
+  eventSource.addEventListener('summary_failed', (e) => {
     const data = JSON.parse((e as MessageEvent).data);
-    callbacks.onFailed(data);
+    callbacks.onSummaryFailed(data);
+    eventSource.close();
+  });
+
+  eventSource.addEventListener('risk_failed', (e) => {
+    const data = JSON.parse((e as MessageEvent).data);
+    callbacks.onRiskFailed(data);
     eventSource.close();
   });
 

@@ -60,8 +60,11 @@ const ScanLoading = () => {
             onComplete: () => {
               if (!cancelled) goToView(ocrResult);
             },
-            onFailed: () => {
-              if (!cancelled) goToView(ocrResult); // 분석 실패 시 OCR 결과만으로 이동
+            onSummaryFailed: () => {
+              if (!cancelled) goToView(ocrResult); // 요약 실패 시 OCR 결과만으로 이동
+            },
+            onRiskFailed: () => {
+              if (!cancelled) goToView(ocrResult); // 위험 분석 실패 시 OCR 결과만으로 이동
             },
             onError: () => {
               if (!cancelled) goToView(ocrResult); // SSE 연결 실패 시 fallback
