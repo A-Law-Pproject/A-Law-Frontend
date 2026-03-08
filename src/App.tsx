@@ -24,7 +24,7 @@ import SupportPage from './pages/mypage/SupportPage.js';
 import OcrOverlay from './pages/debug/OcrOverlay.js';
 
 
-const BOTTOM_NAV_ROUTES = ['/', '/mycontracts', '/MyContracts', '/mypage'];
+const BOTTOM_NAV_ROUTES = ['/', '/mycontracts', '/mypage'];
 
 function App(){
   const navigate = useNavigate();
@@ -103,7 +103,7 @@ function App(){
         <Route path="/mypage" element={<Page><MyPage /></Page>} />
 
         {/* Contract carousel saved page */}
-        <Route path="/MyContracts" element={<MyContracts />} />
+        <Route path="/mycontracts" element={<MyContracts />} />
 
         {/* Kakao OAuth Callback */}
         <Route path="/oauth/callback" element={<KakaoCallback />} />
