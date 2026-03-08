@@ -8,11 +8,9 @@
   /* matches the #root max-width with side margin */
   width: calc(430px - 32px);
   max-width: calc(100vw - 32px);
-
   background: white;
   border-radius: 26px;
   box-shadow: 0 6px 28px rgba(0, 0, 0, 0.13);
-
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -31,6 +29,15 @@
   border-radius: 16px;
   transition: background-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+  /* button reset */
+  background: none;
+  border: none;
+  outline: none;
+}
+
+.bottom-nav-item:focus-visible {
+  outline: 2px solid #5865B9;
+  outline-offset: 2px;
 }
 
 .bottom-nav-item:active {

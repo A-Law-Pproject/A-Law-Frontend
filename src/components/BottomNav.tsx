@@ -17,16 +17,18 @@ const BottomNav = () => {
       {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
         const isActive = pathname === path;
         return (
-          <div
+          <button
             key={path}
+            type="button"
             className={`bottom-nav-item${isActive ? ' active' : ''}`}
             onClick={() => navigate(path)}
+            aria-current={isActive ? 'page' : undefined}
           >
             <div className="bottom-nav-icon-wrap">
               <Icon size={22} />
             </div>
             <span className="bottom-nav-label">{label}</span>
-          </div>
+          </button>
         );
       })}
     </nav>
