@@ -13,7 +13,8 @@ body {
   padding: 0;
   margin: 0;
   background-color: #e0e0e0;
-  height: 100vh;
+  /* height: 100vh; */
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
 }
@@ -21,7 +22,8 @@ body {
 #root {
   max-width: 430px;
   width: 100%;
-  height: 100vh;
+  /* height: 100vh; */
+  min-height: 100dvh;
   overflow-y: auto;
   padding: 0;
   color: #050505;
