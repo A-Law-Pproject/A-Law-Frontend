@@ -56,5 +56,5 @@ jobs:
           fi
           
           echo "Deleting $BRANCH_NAME from destination..."
-          REMOTE_REPO="https://${PERSONAL_TOKEN}@github.com/(내 유저이름)/(내 개인 리포이름).git"
+          REMOTE_REPO="https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git"
           git push $REMOTE_REPO --delete $BRANCH_NAME || echo "Branch already gone."
