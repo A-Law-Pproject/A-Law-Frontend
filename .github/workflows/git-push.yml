@@ -33,6 +33,7 @@ jobs:
           commit-message: ${{ github.event.head_commit.message }}
           # 핵심 수정: 현재 푸시된 브랜치 이름과 동일한 이름으로 개인 리포에 푸시
           target-branch: ${{ github.ref_name }}
+          create-target-branch: true
           
       - name: Debug Output
         run: echo "Pushed to branch ${{ github.ref_name }}"
