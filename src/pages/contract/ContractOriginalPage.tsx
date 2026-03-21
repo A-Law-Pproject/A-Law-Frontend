@@ -14,17 +14,16 @@ interface Props {
   onSelect: (text: string) => void;
 }
 
+const PAGE_PADDING = 18; // matches .page-container padding
+
 const styles = {
     imageContainer: {
-        width: '100%',
-        maxWidth: '600px',
-        border: '3px solid #007bff',
-        borderRadius: '10px',
-        overflow: 'hidden',
-        boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
-        marginTop: '20px',
         position: 'relative' as const,
-        display: 'inline-block',
+        // bleed out of page-container's 18px padding to fill full width
+        marginLeft: -PAGE_PADDING,
+        marginRight: -PAGE_PADDING,
+        width: `calc(100% + ${PAGE_PADDING * 2}px)`,
+        overflow: 'hidden',
     } as const,
     image: {
         width: '100%',
