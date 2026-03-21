@@ -33,6 +33,7 @@ jobs:
           commit-message: ${{ github.event.head_commit.message }}
           # 핵심 수정: 현재 푸시된 브랜치 이름과 동일한 이름으로 개인 리포에 푸시
           target-branch: ${{ github.ref_name }}
+          create-target-branch: true
           
       - name: Debug Output
         run: echo "Pushed to branch ${{ github.ref_name }}"
@@ -56,5 +57,5 @@ jobs:
           fi
           
           echo "Deleting $BRANCH_NAME from destination..."
-          REMOTE_REPO="https://${PERSONAL_TOKEN}@github.com/(내 유저이름)/(내 개인 리포이름).git"
+          REMOTE_REPO="https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git"
           git push $REMOTE_REPO --delete $BRANCH_NAME || echo "Branch already gone."
