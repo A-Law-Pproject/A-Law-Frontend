@@ -136,6 +136,21 @@ export interface ContractListItem {
 }
 
 /**
+ * OCR 오버레이 — 선택 문장 쉬운 말로 설명
+ * POST /api/v1/contracts/easy-explanation
+ */
+export interface OcrEasyExplanationRequest {
+  contractId: number;
+  sentence: string;
+}
+
+export interface OcrEasyExplanationResponse {
+  sentence: string;
+  easy_explanation: string;
+  examples: string[];
+}
+
+/**
  * 5번. 특정 문장 쉬운 말로 설명
  * POST /api/v1/contracts/{id}/easy-explanation
  */

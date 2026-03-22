@@ -146,6 +146,156 @@
   background: rgba(255, 255, 0, 0.1);
 }
 
+/* ── Contract ID input ───────────────────────────── */
+.contractIdInput {
+  width: 60px;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-left: 6px;
+}
+
+/* ── Selection tooltip ───────────────────────────── */
+.selectionTooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.explainBtn {
+  padding: 6px 14px;
+  background: #1e293b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.explainBtn::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1e293b;
+}
+
+.explainBtn:hover {
+  background: #334155;
+}
+
+/* ── Bottom sheet ────────────────────────────────── */
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  z-index: 100;
+  transition: background 0.25s;
+}
+
+.sheetBackdropOpen {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.bottomSheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 360px;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 101;
+  padding: 12px 20px 24px;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1);
+  overflow-y: auto;
+}
+
+.bottomSheetOpen {
+  transform: translateY(0);
+}
+
+.sheetHandle {
+  width: 40px;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.sheetTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px;
+}
+
+.sheetSelectedText {
+  font-size: 15px;
+  color: #1e293b;
+  line-height: 1.6;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+}
+
+.sheetDivider {
+  height: 1px;
+  background: #e5e7eb;
+  margin-bottom: 14px;
+}
+
+.sheetPlaceholder {
+  font-size: 14px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.sheetExplanation {
+  font-size: 14px;
+}
+
+.sheetEasyText {
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.7;
+  margin: 0 0 16px;
+}
+
+.sheetExamples {
+  margin-top: 12px;
+}
+
+.sheetExamplesTitle {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.sheetExampleItem {
+  font-size: 13px;
+  color: #4b5563;
+  padding: 8px 10px;
+  border-left: 3px solid #667eea;
+  background: #f5f3ff;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
 .infoPanel {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
