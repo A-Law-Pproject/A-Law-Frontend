@@ -3,10 +3,11 @@ import styles from "./OcrOverlay.module.css";
 import { getOcrEasyExplanation } from "../../api/contractApi.js";
 import type { OcrEasyExplanationResponse } from "../../api/contractApi.js";
 
-const API_URL = ""; // TODO: 백엔드 주소 설정 (예: /test/ocr)
+const API_URL = "/api/v1/contracts/ocr";
 
 interface OcrWord {
   text: string;
+  confidence: number;
   x: number;
   y: number;
   width: number;
@@ -15,11 +16,11 @@ interface OcrWord {
 
 interface OcrData {
   words: OcrWord[];
-  fullText: string;
-  processingTime: number;
-  imageWidth: number;
-  imageHeight: number;
-  imageUrl?: string;
+  full_text: string;
+  processing_time: number;
+  image_width: number;
+  image_height: number;
+  image_url?: string;
 }
 
 type StatusType = "ok" | "err" | "loading" | "idle";
@@ -170,7 +171,7 @@ export default function OcrOverlay() {
       setOcrData(data);
       const wordCount = data.words?.length ?? 0;
       setStatus({
-        message: `OCR 완료! ${wordCount}개 단어 감지 (${data.processingTime}초)`,
+        message: `OCR 완료! ${wordCount}개 단어 감지 (${data.processing_time}초)`,
         type: "ok",
       });
     } catch (err: unknown) {
@@ -308,13 +309,13 @@ export default function OcrOverlay() {
         {/* Info Panel */}
         {ocrData && (
           <div className={styles.infoPanel}>
-            <InfoCard label="이미지 크기" value={`${ocrData.imageWidth} x ${ocrData.imageHeight}`} />
-            <InfoCard label="처리 시간" value={`${ocrData.processingTime}초`} />
+            <InfoCard label="이미지 크기" value={`${ocrData.image_width} x ${ocrData.image_height}`} />
+            <InfoCard label="처리 시간" value={`${ocrData.processing_time}초`} />
             <InfoCard label="단어 수" value={`${ocrData.words?.length ?? 0}개`} />
             <div className={styles.infoCard}>
               <div className={styles.infoLabel}>전체 텍스트</div>
               <div className={styles.infoTextValue}>
-                {(ocrData.fullText || "").substring(0, 300)}
+                {(ocrData.full_text || "").substring(0, 300)}
               </div>
             </div>
           </div>
