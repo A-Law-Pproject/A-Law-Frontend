@@ -1,10 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import styles from "./OcrOverlay.module.css";
+import { getOcrEasyExplanation } from "../../api/contractApi.js";
+import type { OcrEasyExplanationResponse } from "../../api/contractApi.js";
 
-const API_URL = ""; // TODO: 백엔드 주소 설정 (예: /test/ocr)
+const API_URL = "/api/v1/contracts/ocr";
 
 interface OcrWord {
   text: string;
+  confidence: number;
   x: number;
   y: number;
   width: number;
@@ -13,11 +16,11 @@ interface OcrWord {
 
 interface OcrData {
   words: OcrWord[];
-  fullText: string;
-  processingTime: number;
-  imageWidth: number;
-  imageHeight: number;
-  imageUrl?: string;
+  full_text: string;
+  processing_time: number;
+  image_width: number;
+  image_height: number;
+  image_url?: string;
 }
 
 type StatusType = "ok" | "err" | "loading" | "idle";
@@ -27,6 +30,12 @@ interface StatusState {
   type: StatusType;
 }
 
+interface SelectionTooltip {
+  x: number;
+  y: number;
+  text: string;
+}
+
 export default function OcrOverlay() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
@@ -34,8 +43,22 @@ export default function OcrOverlay() {
   const [ocrData, setOcrData] = useState<OcrData | null>(null);
   const [status, setStatus] = useState<StatusState>({ message: "", type: "idle" });
   const [debugMode, setDebugMode] = useState(false);
+  const [contractId, setContractId] = useState(1);
   const imgRef = useRef<HTMLImageElement>(null);
+  const imageWrapperRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+
+  // Selection tooltip state
+  const [selectionTooltip, setSelectionTooltip] = useState<SelectionTooltip | null>(null);
+
+  // Bottom sheet state
+  const [showSheet, setShowSheet] = useState(false);
+  const [sheetSentence, setSheetSentence] = useState("");
+  const [sheetData, setSheetData] = useState<OcrEasyExplanationResponse | null>(null);
+  const [sheetLoading, setSheetLoading] = useState(false);
+  const [sheetError, setSheetError] = useState("");
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -74,6 +97,60 @@ export default function OcrOverlay() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Dismiss tooltip on outside click
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (tooltipRef.current && tooltipRef.current.contains(e.target as Node)) return;
+      setSelectionTooltip(null);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    const sel = window.getSelection();
+    const text = sel?.toString().trim() ?? "";
+    if (!text || !imageWrapperRef.current || !sel || sel.rangeCount === 0) {
+      setSelectionTooltip(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const wrapperRect = imageWrapperRef.current.getBoundingClientRect();
+    setSelectionTooltip({
+      x: rect.left + rect.width / 2 - wrapperRect.left,
+      y: rect.top - wrapperRect.top - 8,
+      text,
+    });
+  }, []);
+
+  const handleExplainClick = useCallback(async () => {
+    if (!selectionTooltip) return;
+    const sentence = selectionTooltip.text;
+
+    setSheetSentence(sentence);
+    setSelectionTooltip(null);
+    setShowSheet(true);
+    setSheetLoading(true);
+    setSheetError("");
+    setSheetData(null);
+    setTimeout(() => setSheetOpen(true), 20);
+
+    try {
+      const result = await getOcrEasyExplanation(contractId, sentence);
+      setSheetData(result);
+    } catch {
+      setSheetError("설명을 불러오는데 실패했습니다.");
+    } finally {
+      setSheetLoading(false);
+    }
+  }, [selectionTooltip, contractId]);
+
+  const handleCloseSheet = useCallback(() => {
+    setSheetOpen(false);
+    setTimeout(() => setShowSheet(false), 250);
+  }, []);
+
   const handleOcr = useCallback(async () => {
     if (!currentFile) {
       setStatus({ message: "먼저 이미지를 선택하세요", type: "err" });
@@ -94,7 +171,7 @@ export default function OcrOverlay() {
       setOcrData(data);
       const wordCount = data.words?.length ?? 0;
       setStatus({
-        message: `OCR 완료! ${wordCount}개 단어 감지 (${data.processingTime}초)`,
+        message: `OCR 완료! ${wordCount}개 단어 감지 (${data.processing_time}초)`,
         type: "ok",
       });
     } catch (err: unknown) {
@@ -148,6 +225,17 @@ export default function OcrOverlay() {
             박스 표시 (디버그)
           </label>
 
+          <label className={styles.debugLabel}>
+            계약서 ID:
+            <input
+              type="number"
+              value={contractId}
+              onChange={(e) => setContractId(Number(e.target.value))}
+              className={styles.contractIdInput}
+              min={1}
+            />
+          </label>
+
           {status.type !== "idle" && (
             <span className={statusClassName[status.type]}>
               {status.message}
@@ -158,7 +246,11 @@ export default function OcrOverlay() {
         {/* Viewer */}
         <div className={styles.viewer}>
           {imageSrc ? (
-            <div className={styles.imageWrapper}>
+            <div
+              className={styles.imageWrapper}
+              ref={imageWrapperRef}
+              onMouseUp={handleMouseUp}
+            >
               <img
                 ref={imgRef}
                 src={imageSrc}
@@ -186,6 +278,26 @@ export default function OcrOverlay() {
                     </span>
                   );
                 })}
+
+              {/* Selection tooltip */}
+              {selectionTooltip && (
+                <div
+                  ref={tooltipRef}
+                  className={styles.selectionTooltip}
+                  style={{
+                    left: selectionTooltip.x,
+                    top: selectionTooltip.y,
+                  }}
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <button
+                    className={styles.explainBtn}
+                    onClick={handleExplainClick}
+                  >
+                    설명보기
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <p className={styles.placeholder}>
@@ -197,19 +309,54 @@ export default function OcrOverlay() {
         {/* Info Panel */}
         {ocrData && (
           <div className={styles.infoPanel}>
-            <InfoCard label="이미지 크기" value={`${ocrData.imageWidth} x ${ocrData.imageHeight}`} />
-            <InfoCard label="처리 시간" value={`${ocrData.processingTime}초`} />
+            <InfoCard label="이미지 크기" value={`${ocrData.image_width} x ${ocrData.image_height}`} />
+            <InfoCard label="처리 시간" value={`${ocrData.processing_time}초`} />
             <InfoCard label="단어 수" value={`${ocrData.words?.length ?? 0}개`} />
             <div className={styles.infoCard}>
               <div className={styles.infoLabel}>전체 텍스트</div>
               <div className={styles.infoTextValue}>
-                {(ocrData.fullText || "").substring(0, 300)}
+                {(ocrData.full_text || "").substring(0, 300)}
               </div>
             </div>
           </div>
         )}
 
       </div>
+
+      {/* Easy Explanation Bottom Sheet */}
+      {showSheet && (
+        <>
+          <div
+            className={`${styles.sheetBackdrop} ${sheetOpen ? styles.sheetBackdropOpen : ""}`}
+            onClick={handleCloseSheet}
+          />
+          <div className={`${styles.bottomSheet} ${sheetOpen ? styles.bottomSheetOpen : ""}`}>
+            <div className={styles.sheetHandle} />
+            <h3 className={styles.sheetTitle}>선택된 문구</h3>
+            <p className={styles.sheetSelectedText}>{sheetSentence}</p>
+            <div className={styles.sheetDivider} />
+            {sheetLoading ? (
+              <p className={styles.sheetPlaceholder}>설명을 불러오는 중...</p>
+            ) : sheetError ? (
+              <p className={styles.sheetPlaceholder} style={{ color: "#e74c3c" }}>{sheetError}</p>
+            ) : sheetData ? (
+              <div className={styles.sheetExplanation}>
+                <p className={styles.sheetEasyText}>{sheetData.easy_explanation}</p>
+                {sheetData.examples && sheetData.examples.length > 0 && (
+                  <div className={styles.sheetExamples}>
+                    <h4 className={styles.sheetExamplesTitle}>예시</h4>
+                    {sheetData.examples.map((ex: string, i: number) => (
+                      <div key={i} className={styles.sheetExampleItem}>{ex}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className={styles.sheetPlaceholder}>선택한 문구에 대한 설명이 여기에 표시됩니다.</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
