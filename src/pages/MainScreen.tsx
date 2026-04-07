@@ -7,8 +7,6 @@ import './MainScreen.css';
 import ScanIcon from '../assets/icons/scan-icon.png';
 import MicIcon from '../assets/icons/mic.png';
 import ChatbotIcon from '../assets/icons/chatbot.png';
-import DocsNormalIcon from '../assets/icons/docs-normal.png';
-import DocsImportantIcon from '../assets/icons/docs-important.png';
 
 // Icon (react icon)
 import { FaChevronRight } from 'react-icons/fa';
@@ -40,13 +38,13 @@ interface RecentContractItemProps {
 }
 
 const RecentContractItem: FC<RecentContractItemProps> = ({ title, date, isImportant, contractType }) => {
-  const iconSrc = isImportant ? DocsImportantIcon : DocsNormalIcon;
-
   return (
     <div className="ms-contract-item">
-      <img src={iconSrc} className="ms-contract-icon" />
       <div className="ms-contract-details">
-        <div className="ms-contract-title">{title}</div>
+        <div className="ms-contract-title">
+          {isImportant && <span className="ms-star">★</span>}
+          {title}
+        </div>
         <div className="ms-contract-meta">
           <span className="ms-contract-type-badge">{contractType}</span>
         </div>
