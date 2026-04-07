@@ -244,7 +244,7 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
           <div>
             <div className="ms-scan-title">내 계약서</div>
             <div className="ms-scan-title">스캔하기</div>
-            <div className="ms-scan-subtitle">AI가 즉시 분석해 드립니다.</div>
+            <div className="ms-scan-subtitle">계약서 사진 하나면 분석 끝</div>
           </div>
           <div className="ms-scan-icon-box">
             <img src={ScanIcon} />
