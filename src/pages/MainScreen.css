@@ -220,18 +220,35 @@
 }
 
 .ms-contract-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  margin-bottom: 3px;
+  margin-bottom: 5px;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.ms-contract-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.ms-contract-type-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5865B9;
+  background-color: #EEF0FB;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+
 .ms-contract-date {
-  font-size: 13px;
-  color: #aaa;
+  font-size: 12px;
+  color: #bbb;
   text-align: left;
   font-weight: 500;
 }

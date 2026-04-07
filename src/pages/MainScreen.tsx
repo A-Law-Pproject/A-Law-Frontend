@@ -19,12 +19,12 @@ import ChatbotPanel from './contract/ChatbotPanel.js';
 import { getContractList } from '../api/contractApi.js';
 import type { ContractListItem } from '../api/contractApi.js';
 
-const USE_MOCK = false;
+const USE_MOCK = true;
 
 const MOCK_CONTRACTS: ContractListItem[] = [
   { contractId: 1, title: '원룸 전세 계약서', bookmark: true,  contractType: '임대차계약서', status: '분석 완료', createdAt: '2024-03-15T10:00:00.000Z' },
   { contractId: 2, title: '투룸 월세 계약서', bookmark: false, contractType: '임대차계약서', status: '분석 완료', createdAt: '2024-05-20T14:30:00.000Z' },
-  { contractId: 3, title: '오피스텔 임대차 계약서', bookmark: false, contractType: '임대차계약서', status: '분석 대기', createdAt: '2024-07-10T09:15:00.000Z' },
+  { contractId: 3, title: '오피스텔 임대차 계약서', bookmark: false, contractType: '임대차계약서', status: '분석 완료', createdAt: '2024-07-10T09:15:00.000Z' },
 ];
 
 const formatDate = (isoString: string): string => {
@@ -36,9 +36,10 @@ interface RecentContractItemProps {
     title: string;
     date: string;
     isImportant: boolean;
+    contractType: string;
 }
 
-const RecentContractItem: FC<RecentContractItemProps> = ({ title, date, isImportant }) => {
+const RecentContractItem: FC<RecentContractItemProps> = ({ title, date, isImportant, contractType }) => {
   const iconSrc = isImportant ? DocsImportantIcon : DocsNormalIcon;
 
   return (
@@ -46,6 +47,9 @@ const RecentContractItem: FC<RecentContractItemProps> = ({ title, date, isImport
       <img src={iconSrc} className="ms-contract-icon" />
       <div className="ms-contract-details">
         <div className="ms-contract-title">{title}</div>
+        <div className="ms-contract-meta">
+          <span className="ms-contract-type-badge">{contractType}</span>
+        </div>
         <div className="ms-contract-date">{date}</div>
       </div>
       <div className="ms-view-button">
@@ -293,6 +297,7 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
               title={contract.title}
               date={formatDate(contract.createdAt)}
               isImportant={contract.bookmark}
+              contractType={contract.contractType}
             />
           ))
         )}
