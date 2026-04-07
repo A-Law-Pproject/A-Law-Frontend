@@ -26,35 +26,36 @@ import OcrOverlay from './pages/debug/OcrOverlay.js';
 
 const BOTTOM_NAV_ROUTES = ['/', '/mycontracts', '/mypage'];
 
+const pageVariants = {
+  initial: { opacity: 0, x: 18 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -18 },
+};
+
+const Page = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    variants={pageVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    transition={{
+      duration: 0.22,
+      ease: [0.16, 1, 0.3, 1] as const,
+    }}
+    style={{ minHeight: "100vh" }}
+  >
+    {children}
+  </motion.div>
+);
+
 function App(){
   const navigate = useNavigate();
   const location = useLocation();
+  const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
 
   const handleScanClick = () =>{
     navigate('/scan');
   };
-
-  const pageVariants = {
-    initial: { opacity: 0, x: 18 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -18 },
-  };
-
-  const Page = ({ children }: { children: React.ReactNode }) => (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={{
-        duration: 0.22,
-        ease: [0.16, 1, 0.3, 1] as const,
-      }}
-      style={{ minHeight: "100vh" }}
-    >
-      {children}
-    </motion.div>
-  );
 
   const showNav = BOTTOM_NAV_ROUTES.includes(location.pathname);
 
@@ -67,7 +68,11 @@ function App(){
           path="/"
           element={
             <Page>
-              <MainScreen onScanClick={handleScanClick} />
+              <MainScreen
+                onScanClick={handleScanClick}
+                onChatbotOpen={() => setIsChatbotOpen(true)}
+                onChatbotClose={() => setIsChatbotOpen(false)}
+              />
             </Page>
           }
         />
@@ -117,7 +122,7 @@ function App(){
         <Route path="/debug/ocr" element={<OcrOverlay />} />
       </Routes>
     </AnimatePresence>
-    {showNav && <BottomNav />}
+    {showNav && !isChatbotOpen && <BottomNav />}
     </>
   );
 }

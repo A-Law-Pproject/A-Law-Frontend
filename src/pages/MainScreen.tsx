@@ -59,9 +59,11 @@ const RecentContractItem: FC<RecentContractItemProps> = ({ title, date, isImport
 
 interface MainScreenProps {
     onScanClick: () => void;
+    onChatbotOpen?: () => void;
+    onChatbotClose?: () => void;
 }
 
-const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
+const MainScreen: FC<MainScreenProps> = ({ onScanClick, onChatbotOpen, onChatbotClose }) => {
   const navigate = useNavigate();
 
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
@@ -267,7 +269,7 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
       </div>
 
       {/* 챗봇과 대화하기 */}
-      <div className="ms-chatbot-button" onClick={() => setShowChatbot(true)}>
+      <div className="ms-chatbot-button" onClick={() => { setShowChatbot(true); onChatbotOpen?.(); }}>
         <img src={ChatbotIcon} />
         <div className="ms-chatbot-button-text">
           <span className="ms-chatbot-main-text">챗봇과 대화하기</span>
@@ -302,7 +304,7 @@ const MainScreen: FC<MainScreenProps> = ({onScanClick}) => {
       </div>
 
       {/* Chatbot Panel */}
-      {showChatbot && <ChatbotPanel onClose={() => setShowChatbot(false)} />}
+      {showChatbot && <ChatbotPanel onClose={() => { setShowChatbot(false); onChatbotClose?.(); }} />}
 
       {/* 저장 여부 확인 모달 */}
       {showSaveModal && (
