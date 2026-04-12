@@ -103,6 +103,14 @@ const MainScreen: FC<MainScreenProps> = ({ onScanClick, onChatbotOpen, onChatbot
 
   // 챗봇 패널 표시 상태
   const [showChatbot, setShowChatbot] = useState(false);
+  const showChatbotRef = useRef(false);
+  useEffect(() => { showChatbotRef.current = showChatbot; }, [showChatbot]);
+  useEffect(() => {
+    return () => {
+      if (showChatbotRef.current) onChatbotClose?.();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 앱 진입 시 마이크 권한 미리 획득
   useEffect(() => {
