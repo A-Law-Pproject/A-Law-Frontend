@@ -17,7 +17,7 @@ import ChatbotPanel from './contract/ChatbotPanel.js';
 import { getContractList } from '../api/contractApi.js';
 import type { ContractListItem } from '../api/contractApi.js';
 
-const USE_MOCK = true;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 const MOCK_CONTRACTS: ContractListItem[] = [
   { contractId: 1, title: '원룸 전세 계약서', bookmark: true,  contractType: '임대차계약서', status: '분석 완료', createdAt: '2024-03-15T10:00:00.000Z' },
