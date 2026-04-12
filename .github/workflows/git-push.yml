@@ -14,29 +14,32 @@ jobs:
     container: pandoc/latex
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Install mustache (to update the date)
+
+      - name: Install ruby and mustache
         run: apk add ruby && gem install mustache
-        
+
       - name: creates output
         run: sh ./build.sh
-        
-      - name: Pushes to another repository
-        uses: cpina/github-action-push-to-another-repository@main
+
+      - name: Pushes to another repository (Auto Create Branch)
         env:
-          API_TOKEN_GITHUB: ${{ secrets.AUTO_ACTIONS }}
-        with:
-          source-directory: 'output'
-          destination-github-username: missyou2
-          destination-repository-name: A-Law-FE-Debug
-          user-email: ${{ secrets.EMAIL }}
-          commit-message: ${{ github.event.head_commit.message }}
-          # 핵심 수정: 현재 푸시된 브랜치 이름과 동일한 이름으로 개인 리포에 푸시
-          target-branch: ${{ github.ref_name }}
-          create-target-branch: true
+          PERSONAL_TOKEN: ${{ secrets.AUTO_ACTIONS }}
+        run: |
+          # 1. output 디렉토리로 이동
+          cd output
           
-      - name: Debug Output
-        run: echo "Pushed to branch ${{ github.ref_name }}"
+          # 2. git 설정
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 3. 파일 스테이징 및 커밋
+          git add .
+          git commit -m "${{ github.event.head_commit.message }}"
+          
+          # 4. 강제 푸시 (브랜치가 없으면 원격에 생성함)
+          # destination-repository: missyou2/A-Law-FE-Debug
+          git push "https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git" HEAD:refs/heads/${{ github.ref_name }} --force
 
   # 2. 브랜치 삭제 시 실행되는 Job
   delete-branch:
@@ -45,12 +48,10 @@ jobs:
     steps:
       - name: Delete remote branch
         env:
-          PERSONAL_TOKEN: ${{ secrets.AUTO_ACTIONS }} # 위와 동일한 토큰 사용
+          PERSONAL_TOKEN: ${{ secrets.AUTO_ACTIONS }}
         run: |
-          # 삭제된 브랜치 이름 가져오기
           BRANCH_NAME=${{ github.event.ref }}
           
-          # 메인 브랜치는 삭제 방지 (안전 장치)
           if [ "$BRANCH_NAME" == "main" ]; then
             echo "Main branch deletion skipped."
             exit 0
@@ -58,4 +59,5 @@ jobs:
           
           echo "Deleting $BRANCH_NAME from destination..."
           REMOTE_REPO="https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git"
-          git push $REMOTE_REPO --delete $BRANCH_NAME || echo "Branch already gone."
+          # 해당 브랜치가 존재할 때만 삭제 시도
+          git push $REMOTE_REPO --delete $BRANCH_NAME || true
