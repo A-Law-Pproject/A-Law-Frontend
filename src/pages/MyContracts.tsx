@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import DatePicker from 'react-datepicker';
+import { ko } from 'date-fns/locale';
+import 'react-datepicker/dist/react-datepicker.css';
 import '../App.css';
 import './MyContracts.css';
 import checkSelected from '../assets/icons/check-selected.png';
@@ -23,6 +26,8 @@ const formatDate = (isoString: string): string => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+type SortOrder = 'default' | 'newest' | 'oldest';
+
 const MyContracts = () => {
 
   const [isEditing, setIsEditing] = useState(false);
@@ -30,6 +35,9 @@ const MyContracts = () => {
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState<Set<number>>(new Set());
+  const [sortOrder, setSortOrder] = useState<SortOrder>('default');
+  const [dateFrom, setDateFrom] = useState<Date | null>(null);
+  const [dateTo, setDateTo] = useState<Date | null>(null);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -39,7 +47,7 @@ const MyContracts = () => {
           setContracts(MOCK_CONTRACTS);
         } else {
           const data = await getContractList();
-          setContracts(data);
+          setContracts(data.sort((a, b) => (b.bookmark ? 1 : 0) - (a.bookmark ? 1 : 0)));
         }
       } catch (error) {
         console.error("데이터 로딩 실패:", error);
@@ -49,6 +57,35 @@ const MyContracts = () => {
     };
     fetchContracts();
   }, []);
+
+  const filteredContracts = useMemo(() => {
+    let result = [...contracts];
+
+    if (dateFrom) {
+      result = result.filter(c => new Date(c.createdAt) >= dateFrom);
+    }
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59);
+      result = result.filter(c => new Date(c.createdAt) <= end);
+    }
+
+    if (sortOrder === 'newest') {
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else if (sortOrder === 'oldest') {
+      result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+
+    return result;
+  }, [contracts, sortOrder, dateFrom, dateTo]);
+
+  const isFilterActive = dateFrom !== null || dateTo !== null || sortOrder !== 'default';
+
+  const resetFilter = () => {
+    setDateFrom(null);
+    setDateTo(null);
+    setSortOrder('default');
+  };
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
@@ -80,7 +117,6 @@ const MyContracts = () => {
     e.stopPropagation();
     if (bookmarkLoading.has(item.contractId)) return;
 
-    // 낙관적 업데이트
     setContracts(prev =>
       prev.map(c => c.contractId === item.contractId ? { ...c, bookmark: !c.bookmark } : c)
     );
@@ -93,7 +129,6 @@ const MyContracts = () => {
         await addBookmark(item.contractId);
       }
     } catch (error) {
-      // 실패 시 롤백
       setContracts(prev =>
         prev.map(c => c.contractId === item.contractId ? { ...c, bookmark: item.bookmark } : c)
       );
@@ -127,15 +162,68 @@ const MyContracts = () => {
         </span>
       </div>
 
+      {/* 정렬 / 필터 */}
+      {!isEditing && (
+        <div className="mc-filter-bar">
+          <div className="mc-sort-row">
+            <button
+              className={`mc-sort-btn${sortOrder === 'newest' ? ' active' : ''}`}
+              onClick={() => setSortOrder(prev => prev === 'newest' ? 'default' : 'newest')}
+            >
+              최신순
+            </button>
+            <button
+              className={`mc-sort-btn${sortOrder === 'oldest' ? ' active' : ''}`}
+              onClick={() => setSortOrder(prev => prev === 'oldest' ? 'default' : 'oldest')}
+            >
+              오래된순
+            </button>
+            {isFilterActive && (
+              <button className="mc-reset-btn" onClick={resetFilter}>초기화</button>
+            )}
+          </div>
+          <div className="mc-date-row">
+            <DatePicker
+              selected={dateFrom}
+              onChange={(date: Date | Date[] | null) => setDateFrom(date as Date | null)}
+              selectsStart
+              startDate={dateFrom}
+              endDate={dateTo}
+              {...(dateTo ? { maxDate: dateTo } : {})}
+              dateFormat="yyyy.MM.dd"
+              placeholderText="시작일"
+              locale={ko}
+              className="mc-date-input"
+              calendarClassName="mc-calendar"
+              isClearable
+            />
+            <span className="mc-date-sep">~</span>
+            <DatePicker
+              selected={dateTo}
+              onChange={(date: Date | Date[] | null) => setDateTo(date as Date | null)}
+              selectsEnd
+              startDate={dateFrom}
+              endDate={dateTo}
+              {...(dateFrom ? { minDate: dateFrom } : {})}
+              dateFormat="yyyy.MM.dd"
+              placeholderText="종료일"
+              locale={ko}
+              className="mc-date-input"
+              calendarClassName="mc-calendar"
+              isClearable
+            />
+          </div>
+        </div>
+      )}
+
       {/* Contracts list */}
       <div className="mc-contracts-box">
-        {!loading && contracts.length === 0 ? (
+        {!loading && filteredContracts.length === 0 ? (
           <div className="mc-empty-state">
-            저장된 계약서가 없습니다.<br />
-            계약서를 스캔해 보세요.
+            {isFilterActive ? '조건에 맞는 계약서가 없습니다.' : '저장된 계약서가 없습니다.\n계약서를 스캔해 보세요.'}
           </div>
         ) : (
-          contracts.map((item) => (
+          filteredContracts.map((item) => (
             <div
               key={item.contractId}
               className="mc-contract-item"
@@ -162,7 +250,6 @@ const MyContracts = () => {
                 <div className="mc-contract-date">{formatDate(item.createdAt)}</div>
               </div>
 
-              {/* 즐겨찾기 버튼 (편집 모드에서는 숨김) */}
               {!isEditing && (
                 <button
                   className={`mc-bookmark-btn${item.bookmark ? ' active' : ''}${bookmarkLoading.has(item.contractId) ? ' loading' : ''}`}
