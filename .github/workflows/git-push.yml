@@ -14,39 +14,29 @@ jobs:
     container: pandoc/latex
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install ruby and mustache
+      
+      - name: Install mustache (to update the date)
         run: apk add ruby && gem install mustache
-
+        
       - name: creates output
         run: sh ./build.sh
-
-      - name: Pushes to another repository (Auto Create Branch)
+        
+      - name: Pushes to another repository
+        uses: cpina/github-action-push-to-another-repository@main
         env:
-          PERSONAL_TOKEN: ${{ secrets.AUTO_ACTIONS }}
-        run: |
-          # output 디렉토리가 생성되었는지 확인
-          if [ ! -d "output" ]; then
-            echo "Error: 'output' directory not found."
-            exit 1
-          fi
-
-          cd output
+          API_TOKEN_GITHUB: ${{ secrets.AUTO_ACTIONS }}
+        with:
+          source-directory: 'output'
+          destination-github-username: missyou2
+          destination-repository-name: A-Law-FE-Debug
+          user-email: ${{ secrets.EMAIL }}
+          commit-message: ${{ github.event.head_commit.message }}
+          # 핵심 수정: 현재 푸시된 브랜치 이름과 동일한 이름으로 개인 리포에 푸시
+          target-branch: ${{ github.ref_name }}
+          create-target-branch: true
           
-          # Git 초기화 및 설정
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # 현재 파일들을 커밋으로 생성
-          git add .
-          git commit -m "${{ github.event.head_commit.message }}" || echo "No changes to commit"
-          
-          # 핵심 명령어: 대상 리포지토리에 현재 브랜치 이름(${{ github.ref_name }})으로 강제 푸시
-          git push "https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git" HEAD:refs/heads/${{ github.ref_name }} --force
-
       - name: Debug Output
-        run: echo "Successfully pushed to branch ${{ github.ref_name }}"
+        run: echo "Pushed to branch ${{ github.ref_name }}"
 
   # 2. 브랜치 삭제 시 실행되는 Job
   delete-branch:
@@ -55,18 +45,17 @@ jobs:
     steps:
       - name: Delete remote branch
         env:
-          PERSONAL_TOKEN: ${{ secrets.AUTO_ACTIONS }}
+          PERSONAL_TOKEN: ${{ secrets.AUTO_ACTIONS }} # 위와 동일한 토큰 사용
         run: |
+          # 삭제된 브랜치 이름 가져오기
           BRANCH_NAME=${{ github.event.ref }}
           
-          # 메인 브랜치 삭제 방지 안전장치
-          if [ "$BRANCH_NAME" == "main" ] || [ "$BRANCH_NAME" == "master" ]; then
+          # 메인 브랜치는 삭제 방지 (안전 장치)
+          if [ "$BRANCH_NAME" == "main" ]; then
             echo "Main branch deletion skipped."
             exit 0
           fi
           
-          echo "Deleting $BRANCH_NAME from destination repository..."
+          echo "Deleting $BRANCH_NAME from destination..."
           REMOTE_REPO="https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git"
-          
-          # 대상 리포지토리에서 해당 브랜치 삭제 (없어도 에러내지 않음)
           git push $REMOTE_REPO --delete $BRANCH_NAME || echo "Branch already gone."
