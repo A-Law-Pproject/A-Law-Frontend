@@ -25,21 +25,28 @@ jobs:
         env:
           PERSONAL_TOKEN: ${{ secrets.AUTO_ACTIONS }}
         run: |
-          # 1. output 디렉토리로 이동
+          # output 디렉토리가 생성되었는지 확인
+          if [ ! -d "output" ]; then
+            echo "Error: 'output' directory not found."
+            exit 1
+          fi
+
           cd output
           
-          # 2. git 설정
+          # Git 초기화 및 설정
           git init
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 3. 파일 스테이징 및 커밋
+          # 현재 파일들을 커밋으로 생성
           git add .
-          git commit -m "${{ github.event.head_commit.message }}"
+          git commit -m "${{ github.event.head_commit.message }}" || echo "No changes to commit"
           
-          # 4. 강제 푸시 (브랜치가 없으면 원격에 생성함)
-          # destination-repository: missyou2/A-Law-FE-Debug
+          # 핵심 명령어: 대상 리포지토리에 현재 브랜치 이름(${{ github.ref_name }})으로 강제 푸시
           git push "https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git" HEAD:refs/heads/${{ github.ref_name }} --force
+
+      - name: Debug Output
+        run: echo "Successfully pushed to branch ${{ github.ref_name }}"
 
   # 2. 브랜치 삭제 시 실행되는 Job
   delete-branch:
@@ -52,12 +59,14 @@ jobs:
         run: |
           BRANCH_NAME=${{ github.event.ref }}
           
-          if [ "$BRANCH_NAME" == "main" ]; then
+          # 메인 브랜치 삭제 방지 안전장치
+          if [ "$BRANCH_NAME" == "main" ] || [ "$BRANCH_NAME" == "master" ]; then
             echo "Main branch deletion skipped."
             exit 0
           fi
           
-          echo "Deleting $BRANCH_NAME from destination..."
+          echo "Deleting $BRANCH_NAME from destination repository..."
           REMOTE_REPO="https://${PERSONAL_TOKEN}@github.com/missyou2/A-Law-FE-Debug.git"
-          # 해당 브랜치가 존재할 때만 삭제 시도
-          git push $REMOTE_REPO --delete $BRANCH_NAME || true
+          
+          # 대상 리포지토리에서 해당 브랜치 삭제 (없어도 에러내지 않음)
+          git push $REMOTE_REPO --delete $BRANCH_NAME || echo "Branch already gone."
