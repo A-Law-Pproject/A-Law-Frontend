@@ -7,8 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://api.a-law.site', // Backend Server address
+        target: 'https://api.a-law.site', // Backend Server address
         changeOrigin: true,
+        secure: false,
       },
     },
   },
