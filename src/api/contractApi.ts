@@ -220,10 +220,17 @@ export const generateEasyExplanation = async (
  */
 export const getOcrEasyExplanation = async (
   contractId: number,
-  sentence: string,
-): Promise<OcrEasyExplanationResponse> => {
-  const response = await apiClient.post('/contracts/easy-explanation', { contractId, sentence });
-  return response.data;
+  originalSentence: string,
+): Promise<{
+  original_sentence: string;
+  easy_explanation: string;
+}> => {
+  const response = await apiClient.post('/contracts/easy-explanation', {
+    contract_id: contractId,
+    original_sentence: originalSentence,
+  });
+
+  return response.data.data;
 };
 
 /**
