@@ -226,8 +226,8 @@ export const getOcrEasyExplanation = async (
   easy_explanation: string;
 }> => {
   const response = await apiClient.post('/contracts/easy-explanation', {
-    contract_id: contractId,
-    original_sentence: originalSentence,
+    contractId,
+    originalSentence,
   });
 
   return response.data.data;
