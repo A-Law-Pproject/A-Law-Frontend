@@ -221,10 +221,17 @@ export const generateEasyExplanation = async (
  */
 export const getOcrEasyExplanation = async (
   contractId: number,
-  sentence: string,
-): Promise<OcrEasyExplanationResponse> => {
-  const response = await apiClient.post('/contracts/easy-explanation', { contractId, sentence });
-  return response.data;
+  originalSentence: string,
+): Promise<{
+  original_sentence: string;
+  easy_explanation: string;
+}> => {
+  const response = await apiClient.post('/contracts/easy-explanation', {
+    contractId,
+    originalSentence,
+  });
+
+  return response.data.data;
 };
 
 /**
@@ -267,11 +274,16 @@ export const subscribeAnalysisSSE = (
         cautionCount: raw.cautionCount ?? raw.caution_count ?? 0,
         safetyCount:  raw.safetyCount  ?? raw.safety_count  ?? 0,
         clauseResults: (raw.clauseResults ?? raw.clause_results ?? []).map((c: Record<string, unknown>) => ({
-          clauseId:  c.clauseId  ?? c.clause_id,
-          content:   c.content,
-          riskLevel: c.riskLevel ?? c.risk_level,
-          reason:    c.reason,
-          category:  c.category,
+          clauseId:       c.clauseId       ?? c.clause_id,
+          clauseContent:  c.clauseContent  ?? c.clause_content  ?? c.content ?? '',
+          clauseTitle:    c.clauseTitle    ?? c.clause_title    ?? '',
+          riskLevel:      c.riskLevel      ?? c.risk_level      ?? '',
+          reasoningSummary: c.reasoningSummary ?? c.reasoning_summary ?? c.reason ?? '',
+          recommendation: c.recommendation ?? '',
+          legalReference: c.legalReference ?? c.legal_reference ?? '',
+          relatedLaw:     c.relatedLaw     ?? c.related_law     ?? '',
+          score:          c.score          ?? 0,
+          category:       c.category,
         })),
       };
       callbacks.onAnalysisResult(data);
