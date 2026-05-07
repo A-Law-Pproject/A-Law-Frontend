@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ChatbotIcon from "../../assets/icons/chatbot.png";
 
 interface Props {
@@ -28,6 +28,19 @@ function ChatbotFloatingButton({ onClick }: Props) {
   const offset = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const isPointerDown = useRef(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const left = getContainerLeft();
+      const w = getContainerWidth();
+      setPos((prev) => ({
+        x: Math.min(Math.max(prev.x, left), left + w - 56),
+        y: Math.min(Math.max(prev.y, 80), window.innerHeight - 120),
+      }));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
