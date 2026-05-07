@@ -132,6 +132,15 @@ export const getContractById = async (contractId: number): Promise<ApiSuccessRes
 };
 
 /**
+ * 계약서 제목 수정
+ * PATCH /api/v1/contracts/{id}
+ */
+export const updateContractTitle = async (contractId: number, title: string): Promise<ApiSuccessResponse<ContractDetail>> => {
+  const response = await apiClient.patch<ApiSuccessResponse<ContractDetail>>(`/contracts/${contractId}`, { title });
+  return response.data;
+};
+
+/**
  * 계약서 삭제
  * DELETE /api/v1/contracts/{id}
  */
