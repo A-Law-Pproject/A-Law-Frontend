@@ -111,7 +111,7 @@ export const startVoiceAnalysis = async (
 
 /**
  * 음성 분석 결과 조회
- * GET /api/v1/voice-records/{voiceRecordId}/analysis
+ * GET /api/v1/voice-records/{voiceRecordId}/fact-check
  */
 export const getVoiceAnalysisResult = async (
   voiceRecordId: number,
@@ -119,7 +119,7 @@ export const getVoiceAnalysisResult = async (
 ): Promise<VoiceFactCheckResponse> => {
   const params = contractId !== undefined ? { contractId } : {};
   const response = await apiClient.get<{ success: boolean; data: VoiceFactCheckResponse }>(
-    `/voice-records/${voiceRecordId}/analysis`,
+    `/voice-records/${voiceRecordId}/fact-check`,
     { params },
   );
   return response.data.data;
