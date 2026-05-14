@@ -281,19 +281,7 @@ const MyContracts = () => {
               <div className="mc-contract-details">
                 <div className="mc-contract-title">
                   {item.bookmark && <span className="mc-star">★</span>}
-                  {isEditing && editingTitleId === item.contractId ? (
-                    <input
-                      className="mc-title-input"
-                      value={editingTitleValue}
-                      onChange={(e) => setEditingTitleValue(e.target.value)}
-                      onBlur={() => handleTitleSave(item.contractId)}
-                      onKeyDown={(e) => handleTitleKeyDown(e, item.contractId)}
-                      onClick={(e) => e.stopPropagation()}
-                      autoFocus
-                    />
-                  ) : (
-                    item.title
-                  )}
+                  {item.title}
                 </div>
                 <div className="mc-contract-meta">
                   <span className="mc-contract-type-badge">{item.contractType}</span>
@@ -303,11 +291,10 @@ const MyContracts = () => {
 
               {isEditing ? (
                 <button
-                  className="mc-pencil-btn"
+                  className="mc-rename-btn"
                   onClick={(e) => handleTitleEditClick(e, item)}
-                  aria-label="제목 수정"
                 >
-                  ✎
+                  이름수정
                 </button>
               ) : (
                 <button
@@ -323,6 +310,24 @@ const MyContracts = () => {
         )}
       </div>
 
+      {editingTitleId !== null && (
+        <div className="mc-modal-overlay" onClick={() => setEditingTitleId(null)}>
+          <div className="mc-modal" onClick={(e) => e.stopPropagation()}>
+            <input
+              className="mc-modal-input"
+              value={editingTitleValue}
+              placeholder="바꿀 이름을 입력하세요"
+              onChange={(e) => setEditingTitleValue(e.target.value)}
+              onKeyDown={(e) => handleTitleKeyDown(e, editingTitleId)}
+              autoFocus
+            />
+            <div className="mc-modal-actions">
+              <button className="mc-modal-cancel" onClick={() => setEditingTitleId(null)}>취소</button>
+              <button className="mc-modal-confirm" onClick={() => handleTitleSave(editingTitleId)}>완료</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
