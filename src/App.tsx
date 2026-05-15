@@ -22,7 +22,6 @@ import TermsPage from './pages/mypage/TermsPage.js';
 import PrivacyPage from './pages/mypage/PrivacyPage.js';
 import SupportPage from './pages/mypage/SupportPage.js';
 import RecordingsPage from './pages/mypage/RecordingsPage.js';
-import TermsAgreePage from './pages/TermsAgreePage.js';
 
 // Debug
 import OcrOverlay from './pages/debug/OcrOverlay.js';
@@ -207,10 +206,7 @@ function App(){
         {/* Kakao OAuth Callback */}
         <Route path="/oauth/callback" element={<KakaoCallback />} />
 
-        {/* 최초 로그인 약관 동의 */}
-        <Route path="/terms-agree" element={<Page><TermsAgreePage /></Page>} />
-
-        {/* Recordings Page */}
+{/* Recordings Page */}
         <Route path="/recordings" element={<Page><RecordingsPage /></Page>} />
 
         {/* Static Page Router */}
