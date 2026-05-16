@@ -240,7 +240,7 @@ const MyPage = () => {
       const user = getKakaoUser();
       setKakaoUser(user);
       setIsLoggedIn(true);
-      navigate('/terms-agree');
+      navigate('/mypage');
     } catch (error) {
       console.error('Dev 로그인 실패:', error);
       alert('개발 로그인 실패: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
