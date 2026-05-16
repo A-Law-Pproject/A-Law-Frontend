@@ -411,13 +411,23 @@ const MyPage = () => {
         </div>
 
         <div
-          style={{ ...styles.menuItem, ...styles.menuItemLast }}
+          style={styles.menuItem}
           onClick={() => navigate('/support')}
           onMouseDown={pressStyle}
           onMouseUp={releaseStyle}
           onMouseLeave={releaseStyle}
         >
           문의하기 <span style={styles.menuRight}>›</span>
+        </div>
+
+        <div
+          style={{ ...styles.menuItem, ...styles.menuItemLast }}
+          onClick={() => navigate('/info')}
+          onMouseDown={pressStyle}
+          onMouseUp={releaseStyle}
+          onMouseLeave={releaseStyle}
+        >
+          정보 <span style={styles.menuRight}>›</span>
         </div>
       </div>
 
