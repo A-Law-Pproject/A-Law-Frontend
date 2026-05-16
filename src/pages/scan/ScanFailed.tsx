@@ -7,7 +7,7 @@ import AlbumIcon from '../../assets/icons/album.png';
 import CameraIcon from '../../assets/icons/camera.png';
 import { FaArrowLeft } from 'react-icons/fa';
 
-type ErrorReason = 'server_error' | 'invalid_format' | 'ocr_error';
+type ErrorReason = 'server_error' | 'invalid_format' | 'ocr_error' | 'unauthorized';
 
 const ERROR_MESSAGES: Record<ErrorReason, { title: string; description: string }> = {
   server_error: {
@@ -21,6 +21,10 @@ const ERROR_MESSAGES: Record<ErrorReason, { title: string; description: string }
   ocr_error: {
     title: '텍스트 인식 실패',
     description: '계약서의 텍스트를 인식하지 못했습니다.\n더 선명한 이미지로 다시 시도해 주세요.',
+  },
+  unauthorized: {
+    title: '인증 오류',
+    description: '로그인이 필요합니다.\n다시 로그인 후 시도해 주세요.',
   },
 };
 
