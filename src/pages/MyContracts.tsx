@@ -42,6 +42,7 @@ const MyContracts = () => {
   const [dateTo, setDateTo] = useState<Date | null>(null);
   const [editingTitleId, setEditingTitleId] = useState<number | null>(null);
   const [editingTitleValue, setEditingTitleValue] = useState('');
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -105,15 +106,21 @@ const MyContracts = () => {
 
   const handleTitleSave = async (contractId: number) => {
     const trimmed = editingTitleValue.trim();
-    setEditingTitleId(null);
-    if (!trimmed) return;
+    if (!trimmed) {
+      setEditingTitleId(null);
+      return;
+    }
+    setIsSavingTitle(true);
     try {
       await updateContractTitle(contractId, trimmed);
       setContracts(prev =>
         prev.map(c => c.contractId === contractId ? { ...c, title: trimmed } : c)
       );
+      setEditingTitleId(null);
     } catch {
       alert('제목 수정 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingTitle(false);
     }
   };
 
@@ -319,11 +326,12 @@ const MyContracts = () => {
               placeholder="바꿀 이름을 입력하세요"
               onChange={(e) => setEditingTitleValue(e.target.value)}
               onKeyDown={(e) => handleTitleKeyDown(e, editingTitleId)}
+              disabled={isSavingTitle}
               autoFocus
             />
             <div className="mc-modal-actions">
-              <button className="mc-modal-cancel" onClick={() => setEditingTitleId(null)}>취소</button>
-              <button className="mc-modal-confirm" onClick={() => handleTitleSave(editingTitleId)}>완료</button>
+              <button className="mc-modal-cancel" onClick={() => setEditingTitleId(null)} disabled={isSavingTitle}>취소</button>
+              <button className="mc-modal-confirm" onClick={() => handleTitleSave(editingTitleId)} disabled={isSavingTitle}>완료</button>
             </div>
           </div>
         </div>
