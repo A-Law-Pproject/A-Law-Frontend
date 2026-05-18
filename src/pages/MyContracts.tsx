@@ -261,7 +261,7 @@ const MyContracts = () => {
               calendarClassName="mc-calendar"
               isClearable
               popperProps={{ strategy: 'fixed' }}
-              popperPlacement="bottom-end"
+              popperPlacement="bottom-start"
               onFocus={(e) => e.target.blur()}
             />
           </div>
