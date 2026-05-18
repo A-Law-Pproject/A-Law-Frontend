@@ -235,6 +235,28 @@ export const exportToImage = async (
 };
 
 /**
+ * 계약서 저장
+ * POST /api/v1/contracts  (multipart/form-data)
+ */
+export const saveContract = async (
+  capturedImageData: string,
+  title: string,
+): Promise<{ job_id: string; contract_id: number; status: string; created_at: string }> => {
+  const blob = dataURLtoBlob(capturedImageData);
+  const formData = new FormData();
+  formData.append('file', blob, 'contract.jpg');
+  formData.append('title', title);
+
+  const response = await apiClient.post('/contracts', formData, {
+    transformRequest: (data: FormData, headers: Record<string, string>) => {
+      delete headers['Content-Type'];
+      return data;
+    },
+  });
+  return response.data;
+};
+
+/**
  * 5번. 특정 문장 쉬운 말로 설명
  * POST /api/v1/contracts/{id}/easy-explanation
  */
