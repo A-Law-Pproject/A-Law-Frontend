@@ -84,6 +84,8 @@ function ContractCarousel() {
   const touchStartX = useRef<number | null>(null);
   const touchStartTime = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const swipeConfirmedRef = useRef(false);
 
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 390;
 
@@ -312,18 +314,14 @@ function ContractCarousel() {
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const inText = isInSelectableTextArea(e.target);
+    swipeConfirmedRef.current = false;
+    setIsDragging(true);
 
     if (inText) {
       clearOpenTimer();
       longPressActivatedRef.current = false;
 
-      const touch =
-        e.touches && e.touches.length > 0
-          ? e.touches[0]
-          : e.changedTouches && e.changedTouches.length > 0
-          ? e.changedTouches[0]
-          : null;
-
+      const touch = e.touches[0] ?? e.changedTouches[0] ?? null;
       if (!touch) return;
 
       longPressTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
@@ -343,32 +341,27 @@ function ContractCarousel() {
         setDragOffset(0);
       }, 1000);
 
-      // 캐러셀 스와이프 대비용으로 일단 기록
+      // 스와이프 확정 전까지 시작점만 기록, swipeConfirmed는 false 유지
       touchStartX.current = touch.clientX;
       touchStartTime.current = Date.now();
       return;
     }
 
-    touchStartX.current = e.touches[0]!.clientX;
+    // 텍스트 외 영역은 즉시 스와이프 확정
+    const touch = e.touches[0]!;
+    touchStartX.current = touch.clientX;
     touchStartTime.current = Date.now();
+    swipeConfirmedRef.current = true;
     setDragOffset(0);
   };
 
   const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     // 롱프레스 활성화된 경우 → 텍스트 선택 드래그
     if (isTextSelectingRef.current && selectingRef.current) {
-      e.preventDefault();
-
       const start = selectionStartRangeRef.current;
       if (!start) return;
 
-      const touch =
-        e.touches && e.touches.length > 0
-          ? e.touches[0]
-          : e.changedTouches && e.changedTouches.length > 0
-          ? e.changedTouches[0]
-          : null;
-
+      const touch = e.touches[0] ?? e.changedTouches[0] ?? null;
       if (!touch) return;
 
       const end = getCaretRangeFromPoint(touch.clientX, touch.clientY);
@@ -378,22 +371,34 @@ function ContractCarousel() {
       return;
     }
 
-    // 롱프레스 대기 중 → 손가락이 10px 이상 움직이면 타이머 취소 후 스와이프로 처리
+    // 롱프레스 대기 중 → 방향 판별 후 스와이프 또는 세로 스크롤 확정
     if (longPressTimerRef.current !== null && !longPressActivatedRef.current) {
       const touch = e.touches[0];
       const start = longPressTouchStartRef.current;
       if (touch && start) {
         const dx = Math.abs(touch.clientX - start.x);
         const dy = Math.abs(touch.clientY - start.y);
-        if (dx > 10 || dy > 10) {
+
+        if (dx > dy && dx > 10) {
+          // 가로 스와이프 확정 → 타이머 취소, 현재 위치에서 깨끗하게 시작
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
+          swipeConfirmedRef.current = true;
+          touchStartX.current = touch.clientX;
+          touchStartTime.current = Date.now();
+        } else if (dy > dx && dy > 10) {
+          // 세로 스크롤 확정 → 타이머 취소, 스와이프 시작하지 않음
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+          touchStartX.current = null;
         }
       }
     }
 
-    if (touchStartX.current === null) return;
-    const delta = e.touches[0]!.clientX - touchStartX.current;
+    if (!swipeConfirmedRef.current || touchStartX.current === null) return;
+
+    const touch = e.touches[0]!;
+    const delta = touch.clientX - touchStartX.current;
     let adjusted = delta;
 
     if (currentIndex === 0 && delta > 0) adjusted = delta * 0.35;
@@ -403,12 +408,13 @@ function ContractCarousel() {
   };
 
   const onTouchEnd = () => {
-    // 롱프레스 타이머 정리
     if (longPressTimerRef.current !== null) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
     longPressTouchStartRef.current = null;
+    swipeConfirmedRef.current = false;
+    setIsDragging(false);
 
     if (isTextSelectingRef.current) {
       isTextSelectingRef.current = false;
@@ -416,7 +422,6 @@ function ContractCarousel() {
       longPressActivatedRef.current = false;
       selectionStartRangeRef.current = null;
       setDragOffset(0);
-
       scheduleOpenOverlay(250);
       return;
     }
@@ -442,6 +447,8 @@ function ContractCarousel() {
 
     setCurrentIndex(next);
     setDragOffset(0);
+    touchStartX.current = null;
+    touchStartTime.current = null;
   };
 
   const handleHighlightClick = (text: string) => {
@@ -455,16 +462,12 @@ function ContractCarousel() {
     const progress = dragOffset / viewportWidth;
     const relative = base - progress;
     const abs = Math.abs(relative);
-
-    const scale = 1 - Math.min(abs * 0.12, 0.14);
-    const opacity = 1 - Math.min(abs * 0.4, 0.5);
-    const translateY = Math.min(abs * 15, 18);
+    const opacity = 1 - Math.min(abs * 0.35, 0.5);
 
     return {
       width: "100%",
       height: "100%",
-      transform: `scale(${scale}) translateY(${translateY}px)`,
-      opacity
+      opacity,
     };
   };
 
@@ -477,6 +480,21 @@ function ContractCarousel() {
       </div>
     );
   };
+
+  // 비passive touchmove: 확정된 스와이프/텍스트선택 중 스크롤 간섭 차단
+  useEffect(() => {
+    const el = carouselViewportRef.current;
+    if (!el) return;
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (swipeConfirmedRef.current || (isTextSelectingRef.current && selectingRef.current)) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", handleTouchMove);
+  }, []);
 
   useEffect(() => {
     const onMouseUp = () => openOverlayNow();
@@ -527,7 +545,7 @@ function ContractCarousel() {
           className="carousel-wrapper"
           style={{
             transform: `translateX(calc(-${currentIndex * 100}% + ${dragOffset}px))`,
-            transition: dragOffset === 0 ? "transform 0.28s ease-out" : "none"
+            transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
           }}
         >
           <div className="carousel-page">
