@@ -96,6 +96,20 @@
 
 .mc-date-row .react-datepicker__input-container {
   width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* X(클리어) 버튼이 생겨도 input 너비가 변하지 않도록 absolute 처리 */
+.mc-date-row .react-datepicker__input-container input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 28px; /* X버튼 자리 확보 */
+}
+
+.mc-date-row .react-datepicker__close-icon {
+  position: absolute;
+  right: 6px;
 }
 
 .mc-date-input {
