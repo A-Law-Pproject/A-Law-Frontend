@@ -11,23 +11,6 @@ import ContractOverlay from "../../components/ContractOverlay.js";
 
 import ChatbotFloatingButton from "./ChatbotFloatingButton.js";
 import ChatbotPanel from "./ChatbotPanel.js";
-import { MOCK_RISK_DATA } from "./RiskAnalysisPage.js";
-
-const MOCK_SUMMARY_DATA: import("../../types/contract.js").SummaryResultEvent = {
-  title: "주거용 부동산 임대차 계약서 (테스트)",
-  summaryText: `이 계약은 서울특별시 강남구 역삼동 123-45 소재 아파트 101호에 대한 **2년 임대차 계약**입니다.
-
-**핵심 조건**
-- 보증금: 3억 원 (계약 시 1천만 원, 잔금 2억 9천만 원)
-- 월세: 없음 (전세)
-- 계약 기간: 2026년 6월 1일 ~ 2028년 5월 31일
-
-**특이사항**
-- 퇴실 시 청소비 20만 원은 임차인 부담
-- 보증금은 퇴실 후 30일 이내 반환
-- 애완동물 사육 및 건물 내 흡연 금지`,
-  keyTerms: ["보증금", "전세", "임대차", "퇴실", "보증금 반환"],
-};
 
 const pages = [
   { id: 0, label: "원문 보기" },
@@ -46,15 +29,9 @@ function ContractCarousel() {
   } | undefined;
   const contractId = locationState?.contractId != null ? String(locationState.contractId) : undefined;
 
-  const isMockMode = !locationState?.jobId;
-
-  const [summaryData, setSummaryData] = useState<SummaryResultEvent | null>(
-    isMockMode ? MOCK_SUMMARY_DATA : null
-  );
-  const [riskData, setRiskData] = useState<AnalysisResultEvent | null>(
-    isMockMode ? MOCK_RISK_DATA : null
-  );
-  const [riskAnalysisDone, setRiskAnalysisDone] = useState(isMockMode);
+  const [summaryData, setSummaryData] = useState<SummaryResultEvent | null>(null);
+  const [riskData, setRiskData] = useState<AnalysisResultEvent | null>(null);
+  const [riskAnalysisDone, setRiskAnalysisDone] = useState(false);
 
   // SSE 구독 — OCR 완료 직후 페이지 진입 시 요약/위험 분석을 백그라운드로 수신
   const analysisResultReceivedRef = useRef(false);
