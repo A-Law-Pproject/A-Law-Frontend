@@ -16,6 +16,19 @@ interface Props {
 
 const PAGE_PADDING = 18; // matches .page-container padding
 
+const MOCK_OCR_TEXT = `<p><strong>주거용 부동산 임대차 계약서</strong></p>
+<p>임대인(갑): 홍길동 (주민등록번호: 800101-1234567)<br/>임차인(을): 김철수 (주민등록번호: 900202-2345678)</p>
+<p><strong>제1조 (목적물 표시)</strong><br/>소재지: 서울특별시 강남구 역삼동 123-45 역삼아파트 101호<br/>전용면적: 84.32㎡ / 공급면적: 112.14㎡</p>
+<p><strong>제2조 (계약 내용)</strong><br/>보증금: 금 삼억 원정 (₩300,000,000)<br/>계약금: 금 일천만 원정 (₩10,000,000) - 계약 시 지불<br/>잔금: 금 이억 구천만 원정 (₩290,000,000) - 2026년 6월 1일 지불</p>
+<p><strong>제3조 (임대 기간)</strong><br/>2026년 6월 1일부터 2028년 5월 31일까지 (24개월)</p>
+<p><strong>제4조 (관리 및 사용)</strong><br/>임차인은 임대인의 동의 없이 임차 목적물을 전대하거나 임차권을 양도할 수 없다.<br/>임차인은 계약 기간 중 애완동물을 사육할 수 없으며 건물 내 흡연을 금지한다.</p>
+<p><strong>제5조 (퇴실 조건)</strong><br/>임차인은 퇴실 시 청소비 금 이십만 원정(₩200,000)을 부담한다.<br/>원상복구 의무를 이행하지 않을 경우 보증금에서 공제할 수 있다.</p>
+<p><strong>제6조 (보증금 반환)</strong><br/>임대인은 임차인의 퇴실일로부터 30일 이내에 보증금을 반환하여야 한다.<br/>다만 임차인의 채무가 있을 경우 이를 공제한 후 반환할 수 있다.</p>
+<p><strong>제7조 (계약 해지)</strong><br/>임차인이 2개월 이상 관리비를 연체하거나 본 계약 조항을 위반할 경우, 임대인은 계약을 즉시 해지할 수 있다.</p>
+<p>본 계약서는 2부를 작성하여 임대인과 임차인이 각 1부씩 보관한다.</p>
+<p>2026년 5월 18일</p>
+<p>임대인(갑): 홍길동 (서명) ________________<br/>임차인(을): 김철수 (서명) ________________</p>`;
+
 /** 백엔드 OCR 텍스트는 "| HTML content |\n| --- |\n| text |" 형식의 마크다운 파이프 테이블.
  *  파이프 래퍼와 구분선을 제거하여 내부 HTML만 추출한다. */
 const stripMarkdownPipes = (text: string): string =>
@@ -41,12 +54,13 @@ const styles = {
 }
 
 function ContractOriginalPage({ onSelect }: Props) {
-  const [mode, setMode] = useState<"image" | "text">("image");
+  const location = useLocation();
+  const [mode, setMode] = useState<"image" | "text">(
+    (location.state as LocationState | undefined)?.capturedImageData ? "image" : "text"
+  );
   const [debugMode, setDebugMode] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
-
-  const location = useLocation();
   const state = location.state as LocationState | undefined;
   const capturedImageData = state?.capturedImageData || null;
   const ocrText = state?.ocrText?.trim() || null;
@@ -182,14 +196,10 @@ function ContractOriginalPage({ onSelect }: Props) {
           <p className="page-caption">OCR로 추출된 계약서 본문입니다.</p>
 
           <div className="doc-box">
-            {ocrText ? (
-              <div
-                dangerouslySetInnerHTML={{ __html: stripMarkdownPipes(ocrText) }}
-                style={{ fontSize: "13px", lineHeight: "1.7", overflowX: "auto" }}
-              />
-            ) : (
-              <p style={{ color: "#999" }}>OCR 결과가 없습니다.</p>
-            )}
+            <div
+              dangerouslySetInnerHTML={{ __html: ocrText ? stripMarkdownPipes(ocrText) : MOCK_OCR_TEXT }}
+              style={{ fontSize: "13px", lineHeight: "1.7", overflowX: "auto" }}
+            />
           </div>
         </>
       )}

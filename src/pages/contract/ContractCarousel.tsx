@@ -11,6 +11,23 @@ import ContractOverlay from "../../components/ContractOverlay.js";
 
 import ChatbotFloatingButton from "./ChatbotFloatingButton.js";
 import ChatbotPanel from "./ChatbotPanel.js";
+import { MOCK_RISK_DATA } from "./RiskAnalysisPage.js";
+
+const MOCK_SUMMARY_DATA: import("../../types/contract.js").SummaryResultEvent = {
+  title: "주거용 부동산 임대차 계약서 (테스트)",
+  summaryText: `이 계약은 서울특별시 강남구 역삼동 123-45 소재 아파트 101호에 대한 **2년 임대차 계약**입니다.
+
+**핵심 조건**
+- 보증금: 3억 원 (계약 시 1천만 원, 잔금 2억 9천만 원)
+- 월세: 없음 (전세)
+- 계약 기간: 2026년 6월 1일 ~ 2028년 5월 31일
+
+**특이사항**
+- 퇴실 시 청소비 20만 원은 임차인 부담
+- 보증금은 퇴실 후 30일 이내 반환
+- 애완동물 사육 및 건물 내 흡연 금지`,
+  keyTerms: ["보증금", "전세", "임대차", "퇴실", "보증금 반환"],
+};
 
 const pages = [
   { id: 0, label: "원문 보기" },
@@ -29,9 +46,15 @@ function ContractCarousel() {
   } | undefined;
   const contractId = locationState?.contractId != null ? String(locationState.contractId) : undefined;
 
-  const [summaryData, setSummaryData] = useState<SummaryResultEvent | null>(null);
-  const [riskData, setRiskData] = useState<AnalysisResultEvent | null>(null);
-  const [riskAnalysisDone, setRiskAnalysisDone] = useState(false);
+  const isMockMode = !locationState?.jobId;
+
+  const [summaryData, setSummaryData] = useState<SummaryResultEvent | null>(
+    isMockMode ? MOCK_SUMMARY_DATA : null
+  );
+  const [riskData, setRiskData] = useState<AnalysisResultEvent | null>(
+    isMockMode ? MOCK_RISK_DATA : null
+  );
+  const [riskAnalysisDone, setRiskAnalysisDone] = useState(isMockMode);
 
   // SSE 구독 — OCR 완료 직후 페이지 진입 시 요약/위험 분석을 백그라운드로 수신
   const analysisResultReceivedRef = useRef(false);
@@ -83,13 +106,24 @@ function ContractCarousel() {
 
   const touchStartX = useRef<number | null>(null);
   const touchStartTime = useRef<number | null>(null);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const dragOffsetRef = useRef(0);
   const swipeConfirmedRef = useRef(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 390;
 
   const carouselViewportRef = useRef<HTMLDivElement | null>(null);
+
+  // React state를 거치지 않고 DOM에 직접 transform 적용 → 드래그 중 re-render 없음
+  const applyTransform = (offset: number, withTransition: boolean) => {
+    dragOffsetRef.current = offset;
+    const el = wrapperRef.current;
+    if (!el) return;
+    el.style.transition = withTransition
+      ? "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+      : "none";
+    el.style.transform = `translateX(calc(-${currentIndex * 100}% + ${offset}px))`;
+  };
 
   const haptic = () => {
     if (navigator.vibrate) navigator.vibrate(10);
@@ -293,7 +327,7 @@ function ContractCarousel() {
   };
 
   const openOverlayNow = () => {
-    if (Math.abs(dragOffset) > 3) return;
+    if (Math.abs(dragOffsetRef.current) > 3) return;
     if (sheetOpen) return;
     if (chatbotOpen) return;
 
@@ -315,7 +349,6 @@ function ContractCarousel() {
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const inText = isInSelectableTextArea(e.target);
     swipeConfirmedRef.current = false;
-    setIsDragging(true);
 
     if (inText) {
       clearOpenTimer();
@@ -326,7 +359,6 @@ function ContractCarousel() {
 
       longPressTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
 
-      // 1초 홀드 후 텍스트 선택 모드 진입
       longPressTimerRef.current = window.setTimeout(() => {
         longPressActivatedRef.current = true;
         isTextSelectingRef.current = true;
@@ -336,27 +368,28 @@ function ContractCarousel() {
         const startRange = getCaretRangeFromPoint(touch.clientX, touch.clientY);
         selectionStartRangeRef.current = startRange;
 
+        // 텍스트 선택 모드 전환 → 스와이프 취소
+        swipeConfirmedRef.current = false;
         touchStartX.current = null;
         touchStartTime.current = null;
-        setDragOffset(0);
+        applyTransform(0, false);
       }, 1000);
 
-      // 스와이프 확정 전까지 시작점만 기록, swipeConfirmed는 false 유지
       touchStartX.current = touch.clientX;
       touchStartTime.current = Date.now();
+      swipeConfirmedRef.current = true;
+      applyTransform(0, false); // transition 즉시 끔
       return;
     }
 
-    // 텍스트 외 영역은 즉시 스와이프 확정
     const touch = e.touches[0]!;
     touchStartX.current = touch.clientX;
     touchStartTime.current = Date.now();
     swipeConfirmedRef.current = true;
-    setDragOffset(0);
+    applyTransform(0, false);
   };
 
   const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    // 롱프레스 활성화된 경우 → 텍스트 선택 드래그
     if (isTextSelectingRef.current && selectingRef.current) {
       const start = selectionStartRangeRef.current;
       if (!start) return;
@@ -371,26 +404,32 @@ function ContractCarousel() {
       return;
     }
 
-    // 롱프레스 대기 중 → 방향 판별 후 스와이프 또는 세로 스크롤 확정
+    // 롱프레스 대기 중 → 방향 판별
     if (longPressTimerRef.current !== null && !longPressActivatedRef.current) {
       const touch = e.touches[0];
       const start = longPressTouchStartRef.current;
       if (touch && start) {
         const dx = Math.abs(touch.clientX - start.x);
         const dy = Math.abs(touch.clientY - start.y);
+        const elapsedMs = Date.now() - (touchStartTime.current ?? Date.now());
 
-        if (dx > dy && dx > 10) {
-          // 가로 스와이프 확정 → 타이머 취소, 현재 위치에서 깨끗하게 시작
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-          swipeConfirmedRef.current = true;
-          touchStartX.current = touch.clientX;
-          touchStartTime.current = Date.now();
+        if (dx > dy && dx > 5) {
+          if (elapsedMs < 600) {
+            // 초반 가로 이동 → 스와이프 의도 → 타이머 취소
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          } else {
+            // 홀드 중 손가락 드리프트 → 타이머 유지, 시각 피드백만 차단
+            swipeConfirmedRef.current = false;
+            applyTransform(0, false);
+          }
         } else if (dy > dx && dy > 10) {
-          // 세로 스크롤 확정 → 타이머 취소, 스와이프 시작하지 않음
+          // 세로 스크롤 → 타이머 취소
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
+          swipeConfirmedRef.current = false;
           touchStartX.current = null;
+          applyTransform(0, false);
         }
       }
     }
@@ -404,7 +443,7 @@ function ContractCarousel() {
     if (currentIndex === 0 && delta > 0) adjusted = delta * 0.35;
     else if (currentIndex === pages.length - 1 && delta < 0) adjusted = delta * 0.35;
 
-    setDragOffset(adjusted);
+    applyTransform(adjusted, false); // state 아닌 DOM 직접 업데이트
   };
 
   const onTouchEnd = () => {
@@ -414,24 +453,34 @@ function ContractCarousel() {
     }
     longPressTouchStartRef.current = null;
     swipeConfirmedRef.current = false;
-    setIsDragging(false);
 
     if (isTextSelectingRef.current) {
+      const capturedText = applyPersistentHighlightFromSelection()
+        ?? window.getSelection()?.toString().trim()
+        ?? null;
+
       isTextSelectingRef.current = false;
       selectingRef.current = false;
       longPressActivatedRef.current = false;
       selectionStartRangeRef.current = null;
-      setDragOffset(0);
-      scheduleOpenOverlay(250);
+      applyTransform(0, false);
+
+      if (capturedText && capturedText.length >= 2 && !sheetOpen && !chatbotOpen) {
+        clearOpenTimer();
+        openTimerRef.current = window.setTimeout(() => {
+          setSelectedText(capturedText);
+          setSheetOpen(true);
+        }, 150);
+      }
       return;
     }
 
     if (touchStartX.current === null || touchStartTime.current === null) {
-      setDragOffset(0);
+      applyTransform(0, true);
       return;
     }
 
-    const distance = dragOffset;
+    const distance = dragOffsetRef.current;
     const time = Date.now() - touchStartTime.current;
     const velocity = distance / time;
 
@@ -445,10 +494,17 @@ function ContractCarousel() {
       else if (distance > 0 && currentIndex > 0) next = currentIndex - 1;
     }
 
-    setCurrentIndex(next);
-    setDragOffset(0);
+    // DOM에 직접 스냅 애니메이션 적용 후 React state 동기화
+    const el = wrapperRef.current;
+    if (el) {
+      el.style.transition = "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+      el.style.transform = `translateX(-${next * 100}%)`;
+    }
+    dragOffsetRef.current = 0;
     touchStartX.current = null;
     touchStartTime.current = null;
+
+    if (next !== currentIndex) setCurrentIndex(next);
   };
 
   const handleHighlightClick = (text: string) => {
@@ -457,19 +513,10 @@ function ContractCarousel() {
     setSheetOpen(true);
   };
 
-  const pageStyle = (index: number) => {
-    const base = index - currentIndex;
-    const progress = dragOffset / viewportWidth;
-    const relative = base - progress;
-    const abs = Math.abs(relative);
-    const opacity = 1 - Math.min(abs * 0.35, 0.5);
-
-    return {
-      width: "100%",
-      height: "100%",
-      opacity,
-    };
-  };
+  const pageStyle = {
+    width: "100%",
+    height: "100%",
+  } as const;
 
   const getIndicator = () => {
     return (
@@ -481,13 +528,15 @@ function ContractCarousel() {
     );
   };
 
-  // 비passive touchmove: 확정된 스와이프/텍스트선택 중 스크롤 간섭 차단
+  // 비passive touchmove: 텍스트 선택 드래그 중에만 스크롤 차단
+  // 스와이프 중에는 preventDefault를 호출하지 않음
+  // → touch-action: pan-y 영역에서 첫 touchmove에 preventDefault 하면 브라우저가 전체 터치 시퀀스를 취소함
   useEffect(() => {
     const el = carouselViewportRef.current;
     if (!el) return;
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (swipeConfirmedRef.current || (isTextSelectingRef.current && selectingRef.current)) {
+      if (isTextSelectingRef.current && selectingRef.current) {
         e.preventDefault();
       }
     };
@@ -504,7 +553,7 @@ function ContractCarousel() {
       clearOpenTimer();
       document.removeEventListener("mouseup", onMouseUp);
     };
-  }, [sheetOpen, chatbotOpen, dragOffset]);
+  }, [sheetOpen, chatbotOpen]);
 
   const handleOverlayClose = () => {
     clearPersistentHighlight();
@@ -543,25 +592,23 @@ function ContractCarousel() {
       >
         <div
           className="carousel-wrapper"
-          style={{
-            transform: `translateX(calc(-${currentIndex * 100}% + ${dragOffset}px))`,
-            transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
-          }}
+          ref={wrapperRef}
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
         >
           <div className="carousel-page">
-            <div style={pageStyle(0)}>
+            <div style={pageStyle}>
               <ContractOriginalPage onSelect={handleHighlightClick} />
             </div>
           </div>
 
           <div className="carousel-page">
-            <div style={pageStyle(1)}>
+            <div style={pageStyle}>
               <ClauseSummaryPage onSelect={handleHighlightClick} summaryData={summaryData} />
             </div>
           </div>
 
           <div className="carousel-page">
-            <div style={pageStyle(2)}>
+            <div style={pageStyle}>
               <RiskAnalysisPage riskData={riskData} analysisDone={riskAnalysisDone} />
             </div>
           </div>
