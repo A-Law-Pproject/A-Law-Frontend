@@ -153,7 +153,14 @@ const MyContracts = () => {
   const handleContractClick = async (contractId: number) => {
     try {
       const res = await getContractById(contractId);
-      navigate('/contract/view', { state: { contract: res.data } });
+      const contract = res.data;
+      navigate('/contract/detail', {
+        state: {
+          contract,
+          contractId: contract.contractId,
+          capturedImageData: contract.fileUrl,
+        },
+      });
     } catch (error) {
       console.error("계약서 조회 실패:", error);
     }
