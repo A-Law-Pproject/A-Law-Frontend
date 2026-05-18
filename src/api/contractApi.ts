@@ -12,6 +12,7 @@ import type {
   AnalysisResultEvent,
   ContractListItem,
   ContractDetail,
+  SaveContractResponse,
   OcrWord,
 } from '../types/contract.js';
 
@@ -241,7 +242,7 @@ export const exportToImage = async (
 export const saveContract = async (
   capturedImageData: string,
   title: string,
-): Promise<{ job_id: string; contract_id: number; status: string; created_at: string }> => {
+): Promise<SaveContractResponse> => {
   const blob = dataURLtoBlob(capturedImageData);
   const formData = new FormData();
   formData.append('file', blob, 'contract.jpg');
