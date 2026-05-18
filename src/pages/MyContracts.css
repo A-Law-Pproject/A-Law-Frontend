@@ -148,7 +148,8 @@
   z-index: 9999 !important;
 }
 
-.react-datepicker-popper {
+.react-datepicker-popper,
+#datepicker-portal .react-datepicker-popper {
   z-index: 9999 !important;
 }
 

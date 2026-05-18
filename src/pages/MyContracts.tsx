@@ -242,7 +242,7 @@ const MyContracts = () => {
               className="mc-date-input"
               calendarClassName="mc-calendar"
               isClearable
-              popperProps={{ strategy: 'fixed' }}
+              portalId="datepicker-portal"
               popperPlacement="bottom-start"
               onFocus={(e) => e.target.blur()}
             />
@@ -260,7 +260,7 @@ const MyContracts = () => {
               className="mc-date-input"
               calendarClassName="mc-calendar"
               isClearable
-              popperProps={{ strategy: 'fixed' }}
+              portalId="datepicker-portal"
               popperPlacement="bottom-start"
               onFocus={(e) => e.target.blur()}
             />
