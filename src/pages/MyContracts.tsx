@@ -242,6 +242,8 @@ const MyContracts = () => {
               className="mc-date-input"
               calendarClassName="mc-calendar"
               isClearable
+              popperProps={{ strategy: 'fixed' }}
+              popperPlacement="bottom-start"
             />
             <span className="mc-date-sep">~</span>
             <DatePicker
@@ -257,6 +259,8 @@ const MyContracts = () => {
               className="mc-date-input"
               calendarClassName="mc-calendar"
               isClearable
+              popperProps={{ strategy: 'fixed' }}
+              popperPlacement="bottom-end"
             />
           </div>
         </div>
