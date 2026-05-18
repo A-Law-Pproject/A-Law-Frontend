@@ -402,6 +402,7 @@ function ContractCarousel() {
       if (capturedText && capturedText.length >= 2 && !sheetOpen && !chatbotOpen) {
         clearOpenTimer();
         openTimerRef.current = window.setTimeout(() => {
+          window.getSelection()?.removeAllRanges();
           setSelectedText(capturedText);
           setSheetOpen(true);
         }, 150);
