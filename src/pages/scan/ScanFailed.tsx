@@ -59,13 +59,14 @@ const ScanPage = () => {
       </div>
 
       {/* 2. 다시 촬영하기 버튼 */}
-      <div
+      <button
+        type="button"
         className="btn-base btn-capture hover-scale-effect"
         onClick={() => navigate('/camera')}
       >
         <img src={CameraIcon} />
         다시 촬영하기
-      </div>
+      </button>
 
       {/* 3. 앨범에서 불러오기 버튼 */}
       <input
@@ -75,13 +76,14 @@ const ScanPage = () => {
         style={{ display: 'none' }}
         onChange={handleFileSelect}
       />
-      <div
+      <button
+        type="button"
         className="btn-base btn-album"
         onClick={() => fileInputRef.current?.click()}
       >
         <img src={AlbumIcon} />
         앨범에서 불러오기
-      </div>
+      </button>
 
       {/* 4. 이전으로 돌아가기 링크 */}
       <div 
