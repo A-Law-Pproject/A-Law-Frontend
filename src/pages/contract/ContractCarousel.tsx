@@ -137,6 +137,7 @@ function ContractCarousel() {
   const longPressTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const selectionStartRangeRef = useRef<Range | null>(null);
+  const selectionEndRangeRef = useRef<Range | null>(null);
 
   const clearOpenTimer = () => {
     if (openTimerRef.current !== null) {
@@ -175,7 +176,13 @@ function ContractCarousel() {
       r.setStart(start.startContainer, start.startOffset);
       r.setEnd(end.startContainer, end.startOffset);
     } catch {
-      return;
+      // end가 start보다 앞에 있을 때 (역방향 드래그) → 방향 반전
+      try {
+        r.setStart(end.startContainer, end.startOffset);
+        r.setEnd(start.startContainer, start.startOffset);
+      } catch {
+        return;
+      }
     }
 
     sel.removeAllRanges();
@@ -208,9 +215,33 @@ function ContractCarousel() {
   };
 
   const captureSelectionText = () => {
+    const start = selectionStartRangeRef.current;
+    const end = selectionEndRangeRef.current;
+
+    // 우리가 직접 추적한 start/end 범위로 텍스트 추출 (OS 선택 범위 무시)
+    if (start && end) {
+      const r = document.createRange();
+      try {
+        r.setStart(start.startContainer, start.startOffset);
+        r.setEnd(end.startContainer, end.startOffset);
+        const text = r.toString().trim();
+        if (text.length >= 2) return text;
+      } catch {
+        // 역방향 드래그 시도
+        try {
+          r.setStart(end.startContainer, end.startOffset);
+          r.setEnd(start.startContainer, start.startOffset);
+          const text = r.toString().trim();
+          if (text.length >= 2) return text;
+        } catch {
+          // fallthrough
+        }
+      }
+    }
+
+    // fallback: 브라우저 selection
     const sel = window.getSelection();
-    if (!sel) return null;
-    if (!selectionIsInsideViewport(sel)) return null;
+    if (!sel || !selectionIsInsideViewport(sel)) return null;
     const text = sel.toString().trim();
     return text.length >= 2 ? text : null;
   };
@@ -303,6 +334,7 @@ function ContractCarousel() {
       const end = getCaretRangeFromPoint(touch.clientX, touch.clientY);
       if (!end) return;
 
+      selectionEndRangeRef.current = end;
       setSelectionRange(start, end);
       return;
     }
@@ -364,6 +396,7 @@ function ContractCarousel() {
       selectingRef.current = false;
       longPressActivatedRef.current = false;
       selectionStartRangeRef.current = null;
+      selectionEndRangeRef.current = null;
       applyTransform(0, false);
 
       if (capturedText && capturedText.length >= 2 && !sheetOpen && !chatbotOpen) {
