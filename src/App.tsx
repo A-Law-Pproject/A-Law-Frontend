@@ -3,7 +3,7 @@ import { useNavigate, Routes, Route, useLocation } from "react-router-dom";
 import { RecordingProvider, useRecording } from './contexts/RecordingContext.js';
 import { FaChevronRight } from 'react-icons/fa';
 import { AnimatePresence, motion } from "framer-motion";
-import BottomNav from './components/BottomNav.js';
+import TopNav from './components/TopNav.js';
 import MainScreen from "./pages/MainScreen.js";
 import ScanPage from "./pages/scan/ScanPage.js";
 import FailedPage from './pages/scan/ScanFailed.js';
@@ -22,7 +22,7 @@ import TermsPage from './pages/mypage/TermsPage.js';
 import PrivacyPage from './pages/mypage/PrivacyPage.js';
 import SupportPage from './pages/mypage/SupportPage.js';
 import RecordingsPage from './pages/mypage/RecordingsPage.js';
-import TermsAgreePage from './pages/TermsAgreePage.js';
+import InfoPage from './pages/mypage/InfoPage.js';
 
 // Debug
 import OcrOverlay from './pages/debug/OcrOverlay.js';
@@ -207,22 +207,20 @@ function App(){
         {/* Kakao OAuth Callback */}
         <Route path="/oauth/callback" element={<KakaoCallback />} />
 
-        {/* 최초 로그인 약관 동의 */}
-        <Route path="/terms-agree" element={<Page><TermsAgreePage /></Page>} />
-
-        {/* Recordings Page */}
+{/* Recordings Page */}
         <Route path="/recordings" element={<Page><RecordingsPage /></Page>} />
 
         {/* Static Page Router */}
         <Route path="/terms" element={<Page><TermsPage /></Page>} />
         <Route path="/privacy" element={<Page><PrivacyPage /></Page>} />
         <Route path="/support" element={<Page><SupportPage /></Page>} />
+        <Route path="/info" element={<Page><InfoPage /></Page>} />
 
         {/* (Debug) OCR Overlay Test Page — http://localhost:5173/debug/ocr */}
         <Route path="/debug/ocr" element={<OcrOverlay />} />
       </Routes>
     </AnimatePresence>
-    {showNav && !isChatbotOpen && <BottomNav />}
+    {showNav && !isChatbotOpen && <TopNav />}
     <RecordingModals />
     </>
     </RecordingProvider>

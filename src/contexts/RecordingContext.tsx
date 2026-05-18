@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useRef, useState, useEffect } from 'react';
-import { uploadVoiceRecordWithContract, uploadVoiceRecord } from '../api/voiceApi.js';
+import { uploadVoiceRecord, startVoiceAnalysis, subscribeVoiceAnalysisSSE } from '../api/voiceApi.js';
+import type { VoiceFactCheckResponse } from '../api/voiceApi.js';
+import { convertBlobToMp3 } from '../utils/audioConverter.js';
 
 interface RecordingContextValue {
   isRecording: boolean;
@@ -137,12 +139,29 @@ export const RecordingProvider = ({ children }: { children: React.ReactNode }) =
     setIsRecording(false);
   };
 
+  const startAnalysisWithSSE = (jobId: string, voiceRecordId: number, contractId?: number) => {
+    startVoiceAnalysis(voiceRecordId, contractId).catch((err) =>
+      console.error("분석 시작 실패:", err),
+    );
+
+    subscribeVoiceAnalysisSSE(jobId, {
+      onComplete: (result: VoiceFactCheckResponse) => {
+        console.log("✅ 음성 분석 완료:", result);
+      },
+      onError: (err) => {
+        console.error("음성 분석 SSE 오류:", err);
+      },
+    });
+  };
+
   const handleContractSelect = async (contractId: number) => {
     const blob = audioBlobRef.current;
     if (blob) {
       try {
-        await uploadVoiceRecordWithContract(contractId, blob, finalSeconds);
+        const mp3Blob = await convertBlobToMp3(blob);
+        const uploaded = await uploadVoiceRecord(mp3Blob, finalSeconds, contractId);
         setSavedContractId(contractId);
+        startAnalysisWithSSE(uploaded.jobId, uploaded.voiceRecordId, contractId);
       } catch (err) {
         console.error("녹음 업로드 실패:", err);
       }
@@ -156,7 +175,9 @@ export const RecordingProvider = ({ children }: { children: React.ReactNode }) =
     const blob = audioBlobRef.current;
     if (blob) {
       try {
-        await uploadVoiceRecord(blob, finalSeconds);
+        const mp3Blob = await convertBlobToMp3(blob);
+        const uploaded = await uploadVoiceRecord(mp3Blob, finalSeconds);
+        startAnalysisWithSSE(uploaded.jobId, uploaded.voiceRecordId);
       } catch (err) {
         console.error("녹음 업로드 실패:", err);
       }

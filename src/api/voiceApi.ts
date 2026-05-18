@@ -31,10 +31,15 @@ apiClient.interceptors.response.use(
 // 타입 정의
 // ============================================
 
+export type VoiceRecordStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
 export interface VoiceRecordUploadResponse {
   voiceRecordId: number;
   contractId: number | null;
-  duration: number;
+  title: string | null;
+  jobId: string;
+  fileUrl: string;
+  status: VoiceRecordStatus;
   createdAt: string;
 }
 
@@ -46,49 +51,114 @@ export interface VoiceRecordListItem {
   createdAt: string;
 }
 
+export interface FactCheckItem {
+  claim: string;
+  contractContent: string;
+  isMatch: boolean;
+  severity: string;
+}
+
+export interface VoiceFactCheckResponse {
+  voiceRecordId: number;
+  transcript: string;
+  factCheckItems: FactCheckItem[];
+  status: VoiceRecordStatus;
+  createdAt: string;
+}
+
 // ============================================
 // API 함수들
 // ============================================
 
 /**
- * 녹음 파일 생성 (기존 계약서에 연결)
- * POST /api/v1/contracts/{id}/voice-records
+ * 녹음 파일 저장
+ * - 계약서 연결: POST /api/v1/contracts/{contractId}/voice-records
+ * - 단순 저장:   POST /api/v1/voice-records
  */
-export const uploadVoiceRecordWithContract = async (
-  contractId: number,
+export const uploadVoiceRecord = async (
   audioBlob: Blob,
   duration: number,
+  contractId?: number,
 ): Promise<VoiceRecordUploadResponse> => {
   const formData = new FormData();
-  formData.append('file', audioBlob, 'recording.webm');
+  formData.append('audio', audioBlob, 'recording.mp3');
   formData.append('duration', String(duration));
 
+  const url = contractId !== undefined
+    ? `/contracts/${contractId}/voice-records`
+    : '/voice-records';
+
   const response = await apiClient.post<{ success: boolean; data: VoiceRecordUploadResponse }>(
-    `/contracts/${contractId}/voice-records`,
+    url,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return response.data.data;
 };
 
 /**
- * 녹음 파일 생성 (계약서 연결 없음)
- * POST /api/v1/voice-records
+ * 음성 분석 시작
+ * POST /api/v1/voice-records/{voiceRecordId}/analyze
+ * contractId가 있으면 계약서 내용과 팩트체크, 없으면 단순 리스크 분석
  */
-export const uploadVoiceRecord = async (
-  audioBlob: Blob,
-  duration: number,
-): Promise<VoiceRecordUploadResponse> => {
-  const formData = new FormData();
-  formData.append('file', audioBlob, 'recording.webm');
-  formData.append('duration', String(duration));
+export const startVoiceAnalysis = async (
+  voiceRecordId: number,
+  contractId?: number,
+): Promise<void> => {
+  const params = contractId !== undefined ? { contractId } : {};
+  await apiClient.post(`/voice-records/${voiceRecordId}/analyze`, null, { params });
+};
 
-  const response = await apiClient.post<{ success: boolean; data: VoiceRecordUploadResponse }>(
-    '/voice-records',
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+/**
+ * 음성 분석 결과 조회
+ * GET /api/v1/voice-records/{voiceRecordId}/analysis
+ */
+export const getVoiceAnalysisResult = async (
+  voiceRecordId: number,
+  contractId?: number,
+): Promise<VoiceFactCheckResponse> => {
+  const params = contractId !== undefined ? { contractId } : {};
+  const response = await apiClient.get<{ success: boolean; data: VoiceFactCheckResponse }>(
+    `/voice-records/${voiceRecordId}/analysis`,
+    { params },
   );
   return response.data.data;
+};
+
+/**
+ * 음성 분석 SSE 구독
+ * GET /api/v1/voice-records/analysis/{jobId}/stream
+ *
+ * 이벤트:
+ *   analysis_complete - 분석 완료 → 자동 종료
+ *   error             - 실패 → 자동 종료
+ *
+ * @returns EventSource — 호출측에서 .close()로 구독 종료 가능
+ */
+export interface VoiceAnalysisSSECallbacks {
+  onComplete: (data: VoiceFactCheckResponse) => void;
+  onError: (error: Event) => void;
+}
+
+export const subscribeVoiceAnalysisSSE = (
+  jobId: string,
+  callbacks: VoiceAnalysisSSECallbacks,
+): EventSource => {
+  const token = getKakaoAccessToken();
+  const url = `${BASE_URL}/voice-records/analysis/${encodeURIComponent(jobId)}/stream${token ? `?token=${token}` : ''}`;
+  const eventSource = new EventSource(url, { withCredentials: true });
+
+  eventSource.addEventListener('analysis_complete', (e) => {
+    const data = JSON.parse((e as MessageEvent).data);
+    callbacks.onComplete(data);
+    eventSource.close();
+  });
+
+  eventSource.onerror = (error) => {
+    callbacks.onError(error);
+    eventSource.close();
+  };
+
+  return eventSource;
 };
 
 /**

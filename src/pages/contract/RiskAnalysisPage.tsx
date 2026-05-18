@@ -1,36 +1,8 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AnalysisResultEvent } from "../../types/contract.js";
+import './contractCarousel.css';
 
-export const MOCK_RISK_DATA: AnalysisResultEvent = {
-  totalClauses: 3,
-  riskCount: 1,
-  cautionCount: 1,
-  safetyCount: 1,
-  clauseResults: [
-    {
-      clauseId: 1,
-      content: "임차인은 퇴실시 청소비 20만원 있음.",
-      riskLevel: "risk",
-      category: "임차인에게 불리한 조항",
-      reason: "퇴실 시 청소비를 임차인에게 일방적으로 부담시키는 조항은 공정거래위원회의 불공정약관 기준에 해당할 수 있습니다.",
-    },
-    {
-      clauseId: 2,
-      content: "보증금은 퇴실 후 30일 이내 반환한다.",
-      riskLevel: "caution",
-      category: "보증금 반환 지연 위험",
-      reason: "법적으로는 즉시 반환이 원칙이나, 30일 유예는 임차인에게 불리할 수 있습니다.",
-    },
-    {
-      clauseId: 3,
-      content: "애완동물사육금지 및 건물내 금연",
-      riskLevel: "safety",
-      category: "일반 관리 규정",
-      reason: "일반적인 임대차 계약에 포함되는 표준 조항입니다.",
-    },
-  ],
-};
 
 interface Props {
   riskData: AnalysisResultEvent | null;
@@ -39,11 +11,14 @@ interface Props {
 
 /** riskLevel → 등급/색상 매핑 */
 const getLevelStyle = (riskLevel: string) => {
-  switch (riskLevel?.toLowerCase()) {
+  switch (riskLevel) {
+    case '위험':
     case 'risk':
       return { label: "위험", color: "#e74c3c", bg: "#fdecea", border: "#f0d0d0" };
+    case '주의':
     case 'caution':
       return { label: "주의", color: "#f39c12", bg: "#fef9e7", border: "#f5e6c8" };
+    case '안전':
     case 'safety':
       return { label: "안전", color: "#27ae60", bg: "#eafaf1", border: "#c8e6d0" };
     default:
@@ -68,10 +43,10 @@ function SkeletonCard({ width }: { width?: string }) {
       border: "1px solid #ebebeb",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
-        <div style={{ height: "14px", borderRadius: "6px", background: "#e0e0e0", width: width ?? "70%" }} />
-        <div style={{ height: "24px", width: "40px", borderRadius: "6px", background: "#e0e0e0", flexShrink: 0 }} />
+        <div className="skeleton" style={{ height: "14px", width: width ?? "70%" }} />
+        <div className="skeleton" style={{ height: "24px", width: "40px", flexShrink: 0 }} />
       </div>
-      <div style={{ height: "12px", borderRadius: "6px", background: "#e0e0e0", width: "40%", marginTop: "10px" }} />
+      <div className="skeleton" style={{ height: "12px", width: "40%", marginTop: "10px" }} />
     </div>
   );
 }
@@ -113,7 +88,7 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
     return (
       <div className="page-container">
         <h2 className="page-title">위험 요소 분석</h2>
-        <p className="page-caption">임대차 계약에서 분쟁 가능성이 있는 부분을 분석했습니다.</p>
+        <p className="page-caption">임대차 계약에서 분쟁 가능성이 있는 부분을 분석 중에 있습니다.</p>
 
         {/* 점수 카드 스켈레톤 */}
         <div style={{
@@ -121,10 +96,10 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
           padding: "14px 18px", borderRadius: "12px",
           background: "#f5f5f5", border: "1px solid #ebebeb", marginBottom: "16px",
         }}>
-          <div style={{ width: "40px", height: "36px", borderRadius: "8px", background: "#e0e0e0" }} />
+          <div className="skeleton" style={{ width: "40px", height: "36px", borderRadius: "8px" }} />
           <div style={{ flex: 1 }}>
-            <div style={{ width: "50px", height: "22px", borderRadius: "6px", background: "#e0e0e0" }} />
-            <div style={{ width: "140px", height: "13px", borderRadius: "6px", background: "#e0e0e0", marginTop: "8px" }} />
+            <div className="skeleton" style={{ width: "50px", height: "22px" }} />
+            <div className="skeleton" style={{ width: "140px", height: "13px", marginTop: "8px" }} />
           </div>
         </div>
 
@@ -141,8 +116,8 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
   const { riskCount, cautionCount, safetyCount, clauseResults = [] } = riskData;
   const overall = getOverallStyle(riskCount, cautionCount);
   const sortedClauses = [...clauseResults].sort((a, b) => {
-    const order: Record<string, number> = { risk: 0, caution: 1, safety: 2 };
-    return (order[a.riskLevel?.toLowerCase()] ?? 3) - (order[b.riskLevel?.toLowerCase()] ?? 3);
+    const order: Record<string, number> = { '위험': 0, '주의': 1, '안전': 2, risk: 0, caution: 1, safety: 2 };
+    return (order[a.riskLevel] ?? 3) - (order[b.riskLevel] ?? 3);
   });
 
   return (
@@ -195,8 +170,8 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, flex: 1, lineHeight: "1.5" }}>
-                  {clause.content}
+                <span className="text-selectable" style={{ fontSize: "14px", fontWeight: 600, flex: 1, lineHeight: "1.5" }}>
+                  {clause.clauseContent}
                 </span>
                 <span style={{
                   padding: "3px 10px",
@@ -229,7 +204,7 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
               </div>
 
               <AnimatePresence initial={false}>
-                {isExpanded && clause.reason && (
+                {isExpanded && (clause.reasoningSummary || clause.recommendation) && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
@@ -237,7 +212,7 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
                     transition={{ duration: 0.25, ease: "easeInOut" }}
                     style={{ overflow: "hidden" }}
                   >
-                    <div style={{
+                    <div className="text-selectable" style={{
                       marginTop: "8px",
                       padding: "12px 14px",
                       borderRadius: "8px",
@@ -247,8 +222,18 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
                       lineHeight: "1.7",
                       color: "#333",
                     }}>
-                      <strong style={{ fontSize: "13px", color: "#555" }}>분석 사유</strong>
-                      <p style={{ margin: "6px 0 0" }}>{clause.reason}</p>
+                      {clause.reasoningSummary && (
+                        <>
+                          <strong style={{ fontSize: "13px", color: "#555" }}>분석 사유</strong>
+                          <p style={{ margin: "6px 0 0" }}>{clause.reasoningSummary}</p>
+                        </>
+                      )}
+                      {clause.recommendation && (
+                        <>
+                          <strong style={{ fontSize: "13px", color: "#555", display: "block", marginTop: "10px" }}>권고사항</strong>
+                          <p style={{ margin: "6px 0 0" }}>{clause.recommendation}</p>
+                        </>
+                      )}
                     </div>
                   </motion.div>
                 )}
