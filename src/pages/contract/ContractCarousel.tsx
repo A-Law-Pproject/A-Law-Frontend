@@ -138,9 +138,6 @@ function ContractCarousel() {
 
   const selectionStartRangeRef = useRef<Range | null>(null);
 
-  const persistMarkAttr = "data-persist-highlight";
-  const persistIdRef = useRef(0);
-
   const clearOpenTimer = () => {
     if (openTimerRef.current !== null) {
       window.clearTimeout(openTimerRef.current);
@@ -206,109 +203,16 @@ function ContractCarousel() {
   };
 
   const clearPersistentHighlight = () => {
-    const root = carouselViewportRef.current;
-    if (!root) return;
-
-    const marks = root.querySelectorAll(`span[${persistMarkAttr}="1"]`);
-    marks.forEach((span) => {
-      const parent = span.parentNode;
-      if (!parent) return;
-
-      const textNode = document.createTextNode(span.textContent || "");
-      parent.replaceChild(textNode, span);
-      parent.normalize();
-    });
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
   };
 
-  const applyPersistentHighlightFromSelection = () => {
+  const captureSelectionText = () => {
     const sel = window.getSelection();
     if (!sel) return null;
     if (!selectionIsInsideViewport(sel)) return null;
-    if (sel.rangeCount === 0) return null;
-
-    const range = sel.getRangeAt(0);
     const text = sel.toString().trim();
-    if (text.length < 2) return null;
-
-    clearPersistentHighlight();
-
-    // 하이라이트를 위한 CSS 클래스 기반 접근
-    const markId = `mark-${++persistIdRef.current}`;
-
-    try {
-      // 선택 영역을 개별 텍스트 노드 범위로 분할
-      const startContainer = range.startContainer;
-      const endContainer = range.endContainer;
-
-      if (startContainer === endContainer && startContainer.nodeType === 3) {
-        // 단순한 경우: 같은 텍스트 노드 내
-        const span = document.createElement("span");
-        span.setAttribute(persistMarkAttr, "1");
-        span.setAttribute("data-id", markId);
-        span.style.background = "#FFE066";
-        span.style.borderRadius = "4px";
-        span.style.padding = "0 3px";
-        span.style.display = "inline";
-
-        const clonedRange = range.cloneRange();
-        clonedRange.surroundContents(span);
-      } else {
-        // 복잡한 경우: 여러 노드에 걸침
-        // 각 텍스트 노드에 개별적으로 span 적용
-        const treeWalker = document.createTreeWalker(
-          range.commonAncestorContainer,
-          NodeFilter.SHOW_TEXT,
-          {
-            acceptNode: (node) => {
-              if (range.intersectsNode(node)) {
-                return NodeFilter.FILTER_ACCEPT;
-              }
-              return NodeFilter.FILTER_REJECT;
-            }
-          }
-        );
-
-        const textNodes: Text[] = [];
-        let currentNode;
-        while ((currentNode = treeWalker.nextNode())) {
-          textNodes.push(currentNode as Text);
-        }
-
-        textNodes.forEach((textNode, index) => {
-          const nodeRange = document.createRange();
-          nodeRange.selectNodeContents(textNode);
-
-          // 시작 노드
-          if (textNode === startContainer) {
-            nodeRange.setStart(startContainer, range.startOffset);
-          }
-          // 끝 노드
-          if (textNode === endContainer) {
-            nodeRange.setEnd(endContainer, range.endOffset);
-          }
-
-          const span = document.createElement("span");
-          span.setAttribute(persistMarkAttr, "1");
-          span.setAttribute("data-id", `${markId}-${index}`);
-          span.style.background = "#FFE066";
-          span.style.borderRadius = "4px";
-          span.style.padding = "0 3px";
-          span.style.display = "inline";
-
-          try {
-            nodeRange.surroundContents(span);
-          } catch (e) {
-            console.warn("Failed to surround node:", e);
-          }
-        });
-      }
-    } catch (err) {
-      console.warn("highlight failed:", err);
-      return null;
-    }
-
-    sel.removeAllRanges();
-    return text;
+    return text.length >= 2 ? text : null;
   };
 
   const getSelectionTextIfInsideViewport = () => {
@@ -331,8 +235,7 @@ function ContractCarousel() {
     if (sheetOpen) return;
     if (chatbotOpen) return;
 
-    const fixedText = applyPersistentHighlightFromSelection();
-    const picked = fixedText ?? getSelectionTextIfInsideViewport();
+    const picked = getSelectionTextIfInsideViewport();
     if (!picked) return;
 
     setSelectedText(picked);
@@ -455,9 +358,7 @@ function ContractCarousel() {
     swipeConfirmedRef.current = false;
 
     if (isTextSelectingRef.current) {
-      const capturedText = applyPersistentHighlightFromSelection()
-        ?? window.getSelection()?.toString().trim()
-        ?? null;
+      const capturedText = captureSelectionText();
 
       isTextSelectingRef.current = false;
       selectingRef.current = false;
@@ -536,7 +437,7 @@ function ContractCarousel() {
     if (!el) return;
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (isTextSelectingRef.current && selectingRef.current) {
+      if (isTextSelectingRef.current && selectingRef.current && e.cancelable) {
         e.preventDefault();
       }
     };
