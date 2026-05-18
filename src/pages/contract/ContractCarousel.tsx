@@ -147,7 +147,7 @@ function ContractCarousel() {
 
   const isInSelectableTextArea = (target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
-    return !!target.closest(".doc-box");
+    return !!target.closest(".doc-box") || !!target.closest(".text-selectable");
   };
 
   const getCaretRangeFromPoint = (x: number, y: number): Range | null => {

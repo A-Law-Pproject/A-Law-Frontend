@@ -214,7 +214,7 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, flex: 1, lineHeight: "1.5" }}>
+                <span className="text-selectable" style={{ fontSize: "14px", fontWeight: 600, flex: 1, lineHeight: "1.5" }}>
                   {clause.clauseContent}
                 </span>
                 <span style={{
@@ -256,7 +256,7 @@ function RiskAnalysisPage({ riskData, analysisDone }: Props) {
                     transition={{ duration: 0.25, ease: "easeInOut" }}
                     style={{ overflow: "hidden" }}
                   >
-                    <div style={{
+                    <div className="text-selectable" style={{
                       marginTop: "8px",
                       padding: "12px 14px",
                       borderRadius: "8px",
