@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import type { ContractDetail } from "../../types/contract.js";
+import { getContractById } from "../../api/contractApi.js";
 
 import "./contractCarousel.css";
 import ContractOriginalPage from "./ContractOriginalPage.js";
@@ -13,8 +14,23 @@ import ChatbotPanel from "./ChatbotPanel.js";
 function ContractViewPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const contract = (location.state as { contract?: ContractDetail } | undefined)?.contract;
-  const contractId = contract?.contractId != null ? String(contract.contractId) : undefined;
+  const { contractId: contractIdParam } = useParams<{ contractId: string }>();
+  const locationState = location.state as { contract?: ContractDetail; capturedImageData?: string } | undefined;
+
+  const [contract, setContract] = useState<ContractDetail | null>(locationState?.contract ?? null);
+  const [fetchError, setFetchError] = useState<403 | 'error' | null>(null);
+
+  const contractId = contractIdParam ?? (contract?.contractId != null ? String(contract.contractId) : undefined);
+
+  useEffect(() => {
+    if (contract || !contractId) return;
+    getContractById(Number(contractId))
+      .then(res => setContract(res.data))
+      .catch(err => {
+        const status = err?.response?.status;
+        setFetchError(status === 403 ? 403 : 'error');
+      });
+  }, [contractId]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedText, setSelectedText] = useState<string | null>(null);
@@ -308,6 +324,27 @@ function ContractViewPage() {
     </div>
   );
 
+  if (fetchError) {
+    return (
+      <div style={{ padding: "40px 24px", textAlign: "center" }}>
+        <p style={{ fontSize: "17px", fontWeight: 700, marginBottom: "8px", color: "#111" }}>
+          {fetchError === 403 ? "접근 권한이 없습니다" : "계약서를 불러올 수 없습니다"}
+        </p>
+        <p style={{ fontSize: "14px", color: "#888", marginBottom: "28px" }}>
+          {fetchError === 403
+            ? "본인의 계약서만 열람할 수 있습니다."
+            : "잠시 후 다시 시도해주세요."}
+        </p>
+        <button
+          onClick={() => navigate("/mycontracts")}
+          style={{ padding: "12px 28px", borderRadius: "10px", border: "none", background: "#5865B9", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer" }}
+        >
+          내 계약서 목록으로
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       <div className="header">
@@ -330,7 +367,10 @@ function ContractViewPage() {
         >
           <div className="carousel-page">
             <div style={{ width: "100%", height: "100%" }}>
-              <ContractOriginalPage onSelect={handleHighlightClick} />
+              <ContractOriginalPage
+                onSelect={handleHighlightClick}
+                capturedImageData={contract?.fileUrl ?? locationState?.capturedImageData}
+              />
             </div>
           </div>
           <div className="carousel-page">

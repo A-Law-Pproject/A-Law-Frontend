@@ -194,7 +194,7 @@ function App(){
         <Route path="/contract/view" element={<Page><ContractCarousel /></Page>} />
 
         {/* Saved contract view page (no 다음 button, shows fileUrl image) */}
-        <Route path="/contract/detail" element={<Page><ContractViewPage /></Page>} />
+        <Route path="/contract/detail/:contractId" element={<Page><ContractViewPage /></Page>} />
 
         {/* Contract save page */}
         <Route path="/contract/save" element={<Page><DocumentSavePage /></Page>} />

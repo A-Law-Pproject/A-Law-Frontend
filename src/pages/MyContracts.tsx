@@ -154,10 +154,9 @@ const MyContracts = () => {
     try {
       const res = await getContractById(contractId);
       const contract = res.data;
-      navigate('/contract/detail', {
+      navigate(`/contract/detail/${contract.contractId}`, {
         state: {
           contract,
-          contractId: contract.contractId,
           capturedImageData: contract.fileUrl,
         },
       });
