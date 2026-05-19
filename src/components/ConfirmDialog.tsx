@@ -19,6 +19,9 @@ function ConfirmDialog({ message, onConfirm, onCancel }: Props) {
       onClick={onCancel}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-describedby="confirm-dialog-message"
         style={{
           background: "#fff",
           borderRadius: "16px",
@@ -28,14 +31,17 @@ function ConfirmDialog({ message, onConfirm, onCancel }: Props) {
         }}
         onClick={e => e.stopPropagation()}
       >
-        <p style={{
-          margin: "0 0 24px",
-          fontSize: "15px",
-          fontWeight: 600,
-          color: "#111",
-          lineHeight: "1.55",
-          textAlign: "center",
-        }}>
+        <p
+          id="confirm-dialog-message"
+          style={{
+            margin: "0 0 24px",
+            fontSize: "15px",
+            fontWeight: 600,
+            color: "#111",
+            lineHeight: "1.55",
+            textAlign: "center",
+          }}
+        >
           {message}
         </p>
         <div style={{ display: "flex", gap: "10px" }}>
