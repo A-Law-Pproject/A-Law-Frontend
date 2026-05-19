@@ -150,6 +150,7 @@ export interface ContractListItem {
 export interface ContractDetail extends ContractListItem {
   analysisId: string;
   fileUrl: string;
+  rawText?: string;
 }
 
 /**
