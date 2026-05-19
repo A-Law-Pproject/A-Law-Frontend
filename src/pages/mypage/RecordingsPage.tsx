@@ -9,18 +9,11 @@ import { useRecording } from '../../contexts/RecordingContext.js';
 interface Recording {
   id: number;
   title: string;
-  duration: string;
+  duration: string; // 오디오 로드 후 동적으로 채워짐
   date: string;
-  contractTitle: string | null;
   contractId: number | null;
   fileUrl: string | null;
 }
-
-const formatDuration = (seconds: number): string => {
-  const m = String(Math.floor(seconds / 60)).padStart(2, '0');
-  const s = String(seconds % 60).padStart(2, '0');
-  return `${m}:${s}`;
-};
 
 const formatDate = (isoString: string): string => {
   const d = new Date(isoString);
@@ -29,10 +22,9 @@ const formatDate = (isoString: string): string => {
 
 const toRecording = (item: VoiceRecordListItem): Recording => ({
   id: item.voiceRecordId,
-  title: item.contractTitle ? `${item.contractTitle} 녹음` : `녹음 ${formatDate(item.createdAt)}`,
-  duration: formatDuration(item.duration),
+  title: item.title ?? `녹음 ${formatDate(item.createdAt)}`,
+  duration: '',
   date: formatDate(item.createdAt),
-  contractTitle: item.contractTitle,
   contractId: item.contractId,
   fileUrl: item.fileUrl,
 });
@@ -45,7 +37,6 @@ const MOCK_RECORDINGS: Recording[] = [
     title: '원룸 전세 계약 상담 녹음',
     duration: '00:05',
     date: '2026-05-09',
-    contractTitle: '원룸 전세 계약서',
     contractId: 1,
     fileUrl: '/dummy-recording.wav',
   },
@@ -54,7 +45,6 @@ const MOCK_RECORDINGS: Recording[] = [
     title: '녹음 2026-05-08',
     duration: '00:05',
     date: '2026-05-08',
-    contractTitle: null,
     contractId: null,
     fileUrl: '/dummy-recording.wav',
   },
@@ -280,7 +270,7 @@ const BottomSheet = ({
             <div style={{ fontSize: '17px', fontWeight: '800', color: '#111' }}>{rec.title}</div>
             <div style={{ fontSize: '12px', color: '#aaa', marginTop: '3px' }}>
               {rec.duration} · {rec.date}
-              {rec.contractTitle && ` · ${rec.contractTitle}`}
+              {rec.contractId && ` · 계약서 연동`}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -515,7 +505,7 @@ const RecordingsPage = () => {
                 <div style={styles.itemTitle}>{rec.title}</div>
                 <div style={styles.itemMeta}>
                   {rec.duration} · {rec.date}
-                  {rec.contractTitle && ` · ${rec.contractTitle}`}
+                  {rec.contractId && ` · 계약서 연동`}
                 </div>
                 {analyzingIds.includes(rec.id) && (
                   <div style={{ fontSize: '11px', color: '#FA8C16', fontWeight: 700, marginTop: '3px' }}>

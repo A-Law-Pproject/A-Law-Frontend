@@ -31,26 +31,22 @@ apiClient.interceptors.response.use(
 // 타입 정의
 // ============================================
 
-export type VoiceRecordStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export type VoiceRecordStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
 
-export interface VoiceRecordUploadResponse {
+export interface VoiceRecordResponse {
   voiceRecordId: number;
   contractId: number | null;
   title: string | null;
   jobId: string;
   fileUrl: string;
   status: VoiceRecordStatus;
+  transcript: string | null;
   createdAt: string;
 }
 
-export interface VoiceRecordListItem {
-  voiceRecordId: number;
-  contractId: number | null;
-  contractTitle: string | null;
-  duration: number;
-  fileUrl: string | null;
-  createdAt: string;
-}
+// 업로드 응답과 목록 조회 응답이 동일한 구조
+export type VoiceRecordUploadResponse = VoiceRecordResponse;
+export type VoiceRecordListItem = VoiceRecordResponse;
 
 export interface FactCheckItem {
   claim: string;
@@ -78,12 +74,11 @@ export interface VoiceFactCheckResponse {
  */
 export const uploadVoiceRecord = async (
   audioBlob: Blob,
-  duration: number,
   contractId?: number,
+  title?: string,
 ): Promise<VoiceRecordUploadResponse> => {
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.mp3');
-  formData.append('duration', String(duration));
 
   const url = contractId !== undefined
     ? `/contracts/${contractId}/voice-records`
@@ -92,6 +87,7 @@ export const uploadVoiceRecord = async (
   const response = await apiClient.post<{ success: boolean; data: VoiceRecordUploadResponse }>(
     url,
     formData,
+    { params: title ? { title } : {} },
   );
   return response.data.data;
 };
@@ -107,6 +103,19 @@ export const startVoiceAnalysis = async (
 ): Promise<void> => {
   const params = contractId !== undefined ? { contractId } : {};
   await apiClient.post(`/voice-records/${voiceRecordId}/analyze`, null, { params });
+};
+
+/**
+ * 음성 STT 변환
+ * POST /api/v1/voice-records/{voiceRecordId}/transcribe
+ */
+export const transcribeVoiceRecord = async (
+  voiceRecordId: number,
+): Promise<{ voiceRecordId: number; transcript: string }> => {
+  const response = await apiClient.post<{ success: boolean; data: { voiceRecordId: number; transcript: string } }>(
+    `/voice-records/${voiceRecordId}/transcribe`,
+  );
+  return response.data.data;
 };
 
 /**
@@ -179,8 +188,8 @@ export const getVoiceRecords = async (): Promise<VoiceRecordListItem[]> => {
  */
 export const getVoiceRecordsByContract = async (
   contractId: number,
-): Promise<VoiceRecordListItem[]> => {
-  const response = await apiClient.get<{ success: boolean; data: VoiceRecordListItem[] }>(
+): Promise<VoiceRecordListItem> => {
+  const response = await apiClient.get<{ success: boolean; data: VoiceRecordListItem }>(
     `/contracts/${contractId}/voice-record`,
   );
   return response.data.data;
