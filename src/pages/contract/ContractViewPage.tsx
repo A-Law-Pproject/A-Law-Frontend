@@ -82,6 +82,8 @@ function ContractViewPage() {
   const longPressTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const selectionStartRangeRef = useRef<Range | null>(null);
   const selectionEndRangeRef = useRef<Range | null>(null);
+  const mouseSwipingRef = useRef(false);
+  const mouseDraggingRef = useRef(false);
 
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 390;
   const pages = [{ id: 0 }, { id: 1 }, { id: 2 }];
@@ -181,6 +183,15 @@ function ContractViewPage() {
     if (text.length < 2) return;
     setSelectedText(text);
     setSheetOpen(true);
+  };
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isInSelectableTextArea(e.target)) return;
+    mouseSwipingRef.current = true;
+    mouseDraggingRef.current = false;
+    touchStartX.current = e.clientX;
+    touchStartTime.current = Date.now();
+    applyTransform(0, false);
   };
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -326,13 +337,58 @@ function ContractViewPage() {
   }, []);
 
   useEffect(() => {
-    const onMouseUp = () => openOverlayNow();
+    const onMouseMove = (e: MouseEvent) => {
+      if (!mouseSwipingRef.current || touchStartX.current === null) return;
+      let delta = e.clientX - touchStartX.current;
+      if (Math.abs(delta) > 5) mouseDraggingRef.current = true;
+      if (currentIndex === 0 && delta > 0) delta *= 0.35;
+      else if (currentIndex === pages.length - 1 && delta < 0) delta *= 0.35;
+      applyTransform(delta, false);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    return () => document.removeEventListener("mousemove", onMouseMove);
+  }, [currentIndex]);
+
+  useEffect(() => {
+    const onMouseUp = () => {
+      if (mouseSwipingRef.current) {
+        mouseSwipingRef.current = false;
+        if (mouseDraggingRef.current) {
+          mouseDraggingRef.current = false;
+          const distance = dragOffsetRef.current;
+          const velocity = touchStartTime.current
+            ? distance / (Date.now() - touchStartTime.current)
+            : 0;
+          const threshold = viewportWidth * 0.22;
+          let next = currentIndex;
+          if (velocity < -0.45 && currentIndex < pages.length - 1) next = currentIndex + 1;
+          else if (velocity > 0.45 && currentIndex > 0) next = currentIndex - 1;
+          else if (Math.abs(distance) > threshold) {
+            if (distance < 0 && currentIndex < pages.length - 1) next = currentIndex + 1;
+            else if (distance > 0 && currentIndex > 0) next = currentIndex - 1;
+          }
+          const el = wrapperRef.current;
+          if (el) {
+            el.style.transition = "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+            el.style.transform = `translateX(-${next * 100}%)`;
+          }
+          dragOffsetRef.current = 0;
+          touchStartX.current = null;
+          touchStartTime.current = null;
+          if (next !== currentIndex) setCurrentIndex(next);
+          return;
+        }
+        touchStartX.current = null;
+        touchStartTime.current = null;
+      }
+      openOverlayNow();
+    };
     document.addEventListener("mouseup", onMouseUp);
     return () => {
       clearOpenTimer();
       document.removeEventListener("mouseup", onMouseUp);
     };
-  }, [sheetOpen, chatbotOpen]);
+  }, [sheetOpen, chatbotOpen, currentIndex]);
 
   const handleHighlightClick = (text: string) => {
     clearPersistentHighlight();
@@ -386,6 +442,7 @@ function ContractViewPage() {
       <div
         className="carousel-viewport"
         ref={carouselViewportRef}
+        onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
