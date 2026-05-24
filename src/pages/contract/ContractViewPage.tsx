@@ -86,7 +86,13 @@ function ContractViewPage() {
   const mouseDraggingRef = useRef(false);
 
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 390;
-  const pages = [{ id: 0 }, { id: 1 }, { id: 2 }];
+  const pages = [
+    { id: 0, label: "원문 보기" },
+    { id: 1, label: "요약 보기" },
+    { id: 2, label: "위험 분석" },
+  ];
+
+  const haptic = () => { if (navigator.vibrate) navigator.vibrate(10); };
 
   const applyTransform = (offset: number, withTransition: boolean) => {
     dragOffsetRef.current = offset;
@@ -390,6 +396,17 @@ function ContractViewPage() {
     };
   }, [sheetOpen, chatbotOpen, currentIndex]);
 
+  const goToPage = (index: number) => {
+    if (index === currentIndex) return;
+    haptic();
+    const el = wrapperRef.current;
+    if (el) {
+      el.style.transition = "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+      el.style.transform = `translateX(-${index * 100}%)`;
+    }
+    setCurrentIndex(index);
+  };
+
   const handleHighlightClick = (text: string) => {
     clearPersistentHighlight();
     setSelectedText(text);
@@ -404,9 +421,34 @@ function ContractViewPage() {
 
   const getIndicator = () => (
     <div className="indicator">
-      {currentIndex === 0 ? <span className="indicator-pill">원문 보기</span> : <span className="dot" />}
-      {currentIndex === 1 ? <span className="indicator-pill">요약 보기</span> : <span className="dot" />}
-      {currentIndex === 2 ? <span className="indicator-pill">위험 분석</span> : <span className="dot" />}
+      <button
+        className="carousel-arrow-btn"
+        onClick={() => goToPage(currentIndex - 1)}
+        disabled={currentIndex === 0}
+        aria-label="이전 페이지"
+      >
+        ‹
+      </button>
+      {pages.map((page, i) =>
+        i === currentIndex ? (
+          <span key={i} className="indicator-pill">{page.label}</span>
+        ) : (
+          <span
+            key={i}
+            className="dot"
+            style={{ cursor: "pointer" }}
+            onClick={() => goToPage(i)}
+          />
+        )
+      )}
+      <button
+        className="carousel-arrow-btn"
+        onClick={() => goToPage(currentIndex + 1)}
+        disabled={currentIndex === pages.length - 1}
+        aria-label="다음 페이지"
+      >
+        ›
+      </button>
     </div>
   );
 
